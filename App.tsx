@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, Bus, Navigation, ArrowRight, Info, Loader2, Map as MapIcon, Compass, UserCircle, Footprints, Bike, ArrowLeftRight, MessageCircle, X, List, Pill, Coffee, Building, GraduationCap, School } from 'lucide-react';
-import { UNIQUE_STOPS, STOP_COORDS, getNearbyAmenities } from './busData';
+import { Search, MapPin, Bus, Navigation, ArrowRight, Info, Loader2, Map as MapIcon, Compass, UserCircle, Footprints, Bike, ArrowLeftRight, MessageCircle, X, List, Pill, Coffee, Building, GraduationCap, School, ChevronDown, ChevronUp } from 'lucide-react';
+import { BUS_DATA, UNIQUE_STOPS, STOP_COORDS, getNearbyAmenities } from './busData';
 import { findRoutes } from './services/routingEngine';
 import { getTravelGuidance } from './services/geminiService';
-import { TripSuggestion, RouteSegment, Amenity, AmenityType } from './types';
+import { TripSuggestion, RouteSegment, Amenity, AmenityType, BusRoute } from './types';
 
 // Leaflet is loaded via script tag in index.html
 declare const L: any;
@@ -48,13 +48,15 @@ const getAmenityHtml = (type: AmenityType) => {
 
 const MapComponent: React.FC<{ 
   selectedTrip: TripSuggestion | null, 
+  selectedBusRoute: BusRoute | null,
   userLoc: [number, number] | null,
   activeAmenities: Amenity[],
   onStopSelect: (name: string, coord: [number, number]) => void
-}> = ({ selectedTrip, userLoc, activeAmenities, onStopSelect }) => {
+}> = ({ selectedTrip, selectedBusRoute, userLoc, activeAmenities, onStopSelect }) => {
   const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<any[]>([]);
+  const networkMarkersRef = useRef<any[]>([]);
   const layersRef = useRef<any[]>([]);
   const amenityMarkersRef = useRef<any[]>([]);
 
@@ -67,6 +69,30 @@ const MapComponent: React.FC<{
         attribution: '&copy; OpenStreetMap contributors'
       }).addTo(mapRef.current);
       L.control.zoom({ position: 'topright' }).addTo(mapRef.current);
+      
+      Object.entries(STOP_COORDS).forEach(([name, coord]) => {
+        const networkMarker = L.circleMarker(coord, {
+          radius: 4,
+          fillColor: '#94a3b8',
+          color: '#ffffff',
+          weight: 1.5,
+          opacity: 0.6,
+          fillOpacity: 0.8
+        }).addTo(mapRef.current);
+        
+        networkMarker.bindTooltip(name, { 
+          permanent: false, 
+          direction: 'top',
+          className: 'bg-white border-0 shadow-sm text-[9px] font-bold text-slate-500 rounded px-1'
+        });
+        
+        networkMarker.on('click', (e: any) => {
+          L.DomEvent.stopPropagation(e);
+          onStopSelect(name, coord);
+        });
+        
+        networkMarkersRef.current.push(networkMarker);
+      });
     }
   }, []);
 
@@ -84,7 +110,41 @@ const MapComponent: React.FC<{
       markersRef.current.push(userMarker);
     }
 
-    if (selectedTrip) {
+    if (selectedBusRoute) {
+      const stopCoordsList = selectedBusRoute.stopsEn
+        .map(s => STOP_COORDS[s])
+        .filter(c => !!c);
+      
+      const routeLine = L.polyline(stopCoordsList, {
+        color: BRAND_BLUE,
+        weight: 6,
+        opacity: 0.8
+      }).addTo(mapRef.current);
+      layersRef.current.push(routeLine);
+
+      selectedBusRoute.stopsEn.forEach((stopName, idx) => {
+        const coord = STOP_COORDS[stopName];
+        if (!coord) return;
+
+        const isStart = idx === 0;
+        const isEnd = idx === selectedBusRoute.stopsEn.length - 1;
+
+        const markerHtml = `
+          <div class="bg-white border-2 ${isStart ? 'border-green-600' : isEnd ? 'border-red-600' : 'border-blue-900'} rounded-full w-5 h-5 flex items-center justify-center shadow-md transform -translate-x-1/2 -translate-y-1/2">
+             <div class="w-2.5 h-2.5 rounded-full ${isStart ? 'bg-green-600' : isEnd ? 'bg-red-600' : 'bg-blue-900'}"></div>
+          </div>
+        `;
+
+        const marker = L.marker(coord, { 
+          icon: L.divIcon({ className: 'custom-bus-stop', html: markerHtml, iconSize: [0, 0] }) 
+        }).addTo(mapRef.current);
+        marker.bindPopup(`<b>${stopName}</b><br/>${selectedBusRoute.name} এর স্টপেজ।`);
+        markersRef.current.push(marker);
+      });
+
+      const group = L.featureGroup([...markersRef.current, ...layersRef.current]);
+      mapRef.current.fitBounds(group.getBounds().pad(0.2));
+    } else if (selectedTrip) {
       let busCount = 0;
       selectedTrip.segments.forEach((seg, idx) => {
         let color = '#94a3b8';
@@ -100,18 +160,18 @@ const MapComponent: React.FC<{
         const markerIcon = L.divIcon({
           className: 'custom-div-icon',
           html: isTransfer 
-            ? `<div class="bg-white border-2 border-orange-500 rounded-full w-8 h-8 flex items-center justify-center shadow-lg transform -translate-x-1/2 -translate-y-1/2 cursor-pointer scale-125">
+            ? `<div class="bg-white border-2 border-orange-500 rounded-full w-8 h-8 flex items-center justify-center shadow-lg transform -translate-x-1/2 -translate-y-1/2 cursor-pointer scale-125 z-[3000]">
                  <div class="w-5 h-5 text-orange-600 flex items-center justify-center">
                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 8 16 13"></polyline><line x1="21" y1="8" x2="9" y2="8"></line><polyline points="8 21 3 16 8 11"></polyline><line x1="3" y1="16" x2="15" y2="16"></line></svg>
                  </div>
                </div>`
-            : `<div class="bg-white border-2 border-blue-900 rounded-full w-6 h-6 flex items-center justify-center shadow-md transform -translate-x-1/2 -translate-y-1/2 cursor-pointer">
+            : `<div class="bg-white border-2 border-blue-900 rounded-full w-6 h-6 flex items-center justify-center shadow-md transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-[3000]">
                  <div class="w-2.5 h-2.5 rounded-full" style="background: ${color}"></div>
                </div>`,
           iconSize: [0, 0]
         });
 
-        const marker = L.marker(seg.fromCoord, { icon: markerIcon }).addTo(mapRef.current);
+        const marker = L.marker(seg.fromCoord, { icon: markerIcon, zIndexOffset: 1000 }).addTo(mapRef.current);
         marker.on('click', (e: any) => {
           L.DomEvent.stopPropagation(e);
           onStopSelect(seg.from, seg.fromCoord);
@@ -131,11 +191,12 @@ const MapComponent: React.FC<{
           const lastMarker = L.marker(seg.toCoord, {
             icon: L.divIcon({
               className: 'custom-div-icon',
-              html: `<div class="bg-white border-2 border-red-600 rounded-full w-8 h-8 flex items-center justify-center shadow-lg transform -translate-x-1/2 -translate-y-1/2 scale-110">
+              html: `<div class="bg-white border-2 border-red-600 rounded-full w-8 h-8 flex items-center justify-center shadow-lg transform -translate-x-1/2 -translate-y-1/2 scale-110 z-[3000]">
                        <div class="w-4 h-4 rounded-full bg-red-600 animate-pulse"></div>
                      </div>`,
               iconSize: [0, 0]
-            })
+            }),
+            zIndexOffset: 1000
           }).addTo(mapRef.current);
           lastMarker.on('click', (e: any) => {
              L.DomEvent.stopPropagation(e);
@@ -149,7 +210,7 @@ const MapComponent: React.FC<{
       const group = L.featureGroup([...markersRef.current, ...layersRef.current]);
       mapRef.current.fitBounds(group.getBounds().pad(0.2));
     }
-  }, [selectedTrip, userLoc]);
+  }, [selectedTrip, selectedBusRoute, userLoc]);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -163,7 +224,7 @@ const MapComponent: React.FC<{
         iconSize: [0, 0]
       });
 
-      const marker = L.marker(amenity.coord, { icon: markerIcon }).addTo(mapRef.current);
+      const marker = L.marker(amenity.coord, { icon: markerIcon, zIndexOffset: 2000 }).addTo(mapRef.current);
       marker.bindPopup(`
         <div class="p-1">
           <p class="font-bold text-slate-800 text-sm">${amenity.name}</p>
@@ -188,12 +249,14 @@ export default function App() {
   const [userLoc, setUserLoc] = useState<[number, number] | null>(null);
   const [results, setResults] = useState<TripSuggestion[]>([]);
   const [selectedTrip, setSelectedTrip] = useState<TripSuggestion | null>(null);
+  const [selectedBusRoute, setSelectedBusRoute] = useState<BusRoute | null>(null);
   const [aiGuidance, setAiGuidance] = useState<string>('');
   const [isSearching, setIsSearching] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [activeView, setActiveView] = useState<'list' | 'map'>('list');
   const [activeAmenities, setActiveAmenities] = useState<Amenity[]>([]);
   const [selectedStopName, setSelectedStopName] = useState<string | null>(null);
+  const [sidebarTab, setSidebarTab] = useState<'search' | 'routes'>('search');
 
   useEffect(() => {
     if ("geolocation" in navigator) {
@@ -214,15 +277,18 @@ export default function App() {
     const routes = findRoutes(startInput, endInput);
     setResults(routes);
     setSelectedTrip(null);
+    setSelectedBusRoute(null);
     setAiGuidance('');
     setActiveAmenities([]);
     setSelectedStopName(null);
     setIsSearching(false);
     setActiveView('list');
+    setSidebarTab('search');
   };
 
   const selectTrip = async (trip: TripSuggestion) => {
     setSelectedTrip(trip);
+    setSelectedBusRoute(null);
     setActiveAmenities([]);
     setSelectedStopName(null);
     setActiveView('map');
@@ -230,6 +296,14 @@ export default function App() {
     const guidance = await getTravelGuidance(origin || "আপনার অবস্থান", destination, trip);
     setAiGuidance(guidance);
     setIsAiLoading(false);
+  };
+
+  const handleBusRouteSelect = (bus: BusRoute) => {
+    setSelectedBusRoute(bus);
+    setSelectedTrip(null);
+    setActiveAmenities([]);
+    setSelectedStopName(null);
+    setActiveView('map');
   };
 
   const handleStopSelect = (name: string, coord: [number, number]) => {
@@ -270,61 +344,121 @@ export default function App() {
           </div>
         </header>
 
-        <div className="p-4 md:p-5 space-y-4 overflow-y-auto flex-1">
-          <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-4 shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
-            <div className="relative space-y-3">
-              <div className="relative">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block px-1">START POINT</label>
-                <div className="flex items-center gap-2 bg-white px-3 py-2.5 rounded-xl border border-slate-200 focus-within:border-[#003566] transition-all shadow-sm">
-                  <MapPin className="w-4 h-4 text-blue-500 shrink-0" />
-                  <select value={origin} onChange={(e) => setOrigin(e.target.value)} className="bg-transparent w-full text-sm font-semibold text-slate-700 outline-none appearance-none cursor-pointer">
-                    <option value="">আমার অবস্থান (Auto)</option>
-                    {UNIQUE_STOPS.map(stop => <option key={stop} value={stop}>{stop}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="relative">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block px-1">DESTINATION</label>
-                <div className="flex items-center gap-2 bg-white px-3 py-2.5 rounded-xl border border-slate-200 focus-within:border-red-600 transition-all shadow-sm">
-                  <Search className="w-4 h-4 text-red-500 shrink-0" />
-                  <select value={destination} onChange={(e) => setDestination(e.target.value)} className="bg-transparent w-full text-sm font-semibold text-slate-700 outline-none appearance-none cursor-pointer">
-                    <option value="">গন্তব্য নির্বাচন করুন...</option>
-                    {UNIQUE_STOPS.map(stop => <option key={stop} value={stop}>{stop}</option>)}
-                  </select>
-                </div>
-              </div>
-              <button onClick={handleSearch} disabled={!destination && !isSearching} style={{ backgroundColor: BRAND_BLUE }} className="w-full hover:opacity-90 disabled:bg-slate-300 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 text-sm">
-                {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />}
-                ভ্রমণ নির্দেশিকা তৈরি করুন
-              </button>
-            </div>
-          </div>
+        {/* Sidebar Tabs */}
+        <div className="flex border-b border-slate-100 flex-shrink-0">
+          <button onClick={() => setSidebarTab('search')} className={`flex-1 py-3 text-xs font-black uppercase tracking-widest transition-all border-b-2 ${sidebarTab === 'search' ? 'border-[#003566] text-[#003566]' : 'border-transparent text-slate-400'}`}>রুট খুজুন</button>
+          <button onClick={() => setSidebarTab('routes')} className={`flex-1 py-3 text-xs font-black uppercase tracking-widest transition-all border-b-2 ${sidebarTab === 'routes' ? 'border-[#003566] text-[#003566]' : 'border-transparent text-slate-400'}`}>সবগুলো বাস</button>
+        </div>
 
-          <div className="space-y-3 pb-24 md:pb-5">
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest px-1">রুট রেজাল্টস</h2>
-            {results.map(trip => (
-              <button key={trip.id} onClick={() => selectTrip(trip)} className={`w-full text-left p-4 rounded-2xl border-2 transition-all block ${selectedTrip?.id === trip.id ? 'border-[#003566] bg-blue-50/50' : 'border-slate-100 bg-white hover:border-slate-200 shadow-sm'}`}>
-                <div className="flex justify-between items-center mb-1">
-                  <span className={`px-2 py-0.5 text-[9px] font-black uppercase rounded-md ${trip.totalTransfers === 0 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
-                    {trip.totalTransfers === 0 ? 'Direct Bus' : 'Bus Connection'}
-                  </span>
-                  <ArrowRight className="w-4 h-4 text-slate-300" />
+        <div className="p-4 md:p-5 space-y-4 overflow-y-auto flex-1">
+          {sidebarTab === 'search' ? (
+            <>
+              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-4 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
+                <div className="relative space-y-3">
+                  <div className="relative">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block px-1">START POINT</label>
+                    <div className="flex items-center gap-2 bg-white px-3 py-2.5 rounded-xl border border-slate-200 focus-within:border-[#003566] transition-all shadow-sm">
+                      <MapPin className="w-4 h-4 text-blue-500 shrink-0" />
+                      <select value={origin} onChange={(e) => setOrigin(e.target.value)} className="bg-transparent w-full text-sm font-semibold text-slate-700 outline-none appearance-none cursor-pointer">
+                        <option value="">আমার অবস্থান (Auto)</option>
+                        {UNIQUE_STOPS.map(stop => <option key={stop} value={stop}>{stop}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block px-1">DESTINATION</label>
+                    <div className="flex items-center gap-2 bg-white px-3 py-2.5 rounded-xl border border-slate-200 focus-within:border-red-600 transition-all shadow-sm">
+                      <Search className="w-4 h-4 text-red-500 shrink-0" />
+                      <select value={destination} onChange={(e) => setDestination(e.target.value)} className="bg-transparent w-full text-sm font-semibold text-slate-700 outline-none appearance-none cursor-pointer">
+                        <option value="">গন্তব্য নির্বাচন করুন...</option>
+                        {UNIQUE_STOPS.map(stop => <option key={stop} value={stop}>{stop}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <button onClick={handleSearch} disabled={!destination && !isSearching} style={{ backgroundColor: BRAND_BLUE }} className="w-full hover:opacity-90 disabled:bg-slate-300 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 text-sm">
+                    {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />}
+                    ভ্রমণ নির্দেশিকা তৈরি করুন
+                  </button>
                 </div>
-                <h3 className="font-bold text-slate-800 text-sm">{trip.summary}</h3>
-                <div className="flex items-center gap-3 mt-2 text-[10px] font-bold text-slate-500">
-                  <span className="flex items-center gap-1"><MapIcon className="w-3 h-3" /> {trip.segments.length} Steps</span>
-                  <span style={{ color: BRAND_BLUE }}>৳৩০ - ৯০ আনুমানিক</span>
-                </div>
-              </button>
-            ))}
-          </div>
+              </div>
+
+              <div className="space-y-3 pb-24 md:pb-5">
+                <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest px-1">রুট রেজাল্টস</h2>
+                {results.map(trip => (
+                  <button key={trip.id} onClick={() => selectTrip(trip)} className={`w-full text-left p-4 rounded-2xl border-2 transition-all block ${selectedTrip?.id === trip.id ? 'border-[#003566] bg-blue-50/50' : 'border-slate-100 bg-white hover:border-slate-200 shadow-sm'}`}>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className={`px-2 py-0.5 text-[9px] font-black uppercase rounded-md ${trip.totalTransfers === 0 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                        {trip.totalTransfers === 0 ? 'Direct Bus' : 'Bus Connection'}
+                      </span>
+                      <ArrowRight className="w-4 h-4 text-slate-300" />
+                    </div>
+                    <h3 className="font-bold text-slate-800 text-sm">{trip.summary}</h3>
+                    <div className="flex items-center gap-3 mt-2 text-[10px] font-bold text-slate-500">
+                      <span className="flex items-center gap-1"><MapIcon className="w-3 h-3" /> {trip.segments.length} Steps</span>
+                      <span style={{ color: BRAND_BLUE }}>৳৩০ - ৯০ আনুমানিক</span>
+                    </div>
+                  </button>
+                ))}
+                {results.length === 0 && !isSearching && (
+                  <div className="text-center py-10 opacity-50">
+                    <Bus className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+                    <p className="text-sm">রুট খুজতে উপরে শুরু এবং শেষ স্থান দিন</p>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="space-y-3 pb-24 md:pb-5">
+              <div className="px-1 flex justify-between items-center">
+                 <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">ঢাকার বাস রুটসমূহ ({BUS_DATA.length})</h2>
+              </div>
+              <div className="grid gap-2">
+                {BUS_DATA.map(bus => (
+                  <button 
+                    key={bus.name} 
+                    onClick={() => handleBusRouteSelect(bus)}
+                    className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-center justify-between gap-3 ${selectedBusRoute?.name === bus.name ? 'border-[#003566] bg-blue-50' : 'border-slate-100 bg-white hover:border-slate-200'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                        <Bus className="w-4 h-4 text-[#003566]" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-800">{bus.name}</h4>
+                        <p className="text-[10px] text-slate-500">{bus.description}</p>
+                      </div>
+                    </div>
+                    <ArrowRight className="w-3 h-3 text-slate-300" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       <div className={`flex-1 flex flex-col h-full bg-slate-100 relative ${activeView === 'list' ? 'hidden md:flex' : 'flex'}`}>
-        <MapComponent selectedTrip={selectedTrip} userLoc={userLoc} activeAmenities={activeAmenities} onStopSelect={handleStopSelect} />
+        <MapComponent selectedTrip={selectedTrip} selectedBusRoute={selectedBusRoute} userLoc={userLoc} activeAmenities={activeAmenities} onStopSelect={handleStopSelect} />
         
+        {/* Selected Bus Info Bar (Top of Map) */}
+        {selectedBusRoute && (
+          <div className="absolute top-6 left-6 right-6 md:left-1/2 md:-translate-x-1/2 md:w-[400px] bg-white rounded-2xl shadow-xl border border-slate-200 p-4 z-[1800] flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-50 rounded-lg">
+                <Bus className="w-5 h-5 text-blue-700" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-slate-800">{selectedBusRoute.name}</h3>
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">{selectedBusRoute.stops.length} টি স্টপেজ</p>
+              </div>
+            </div>
+            <button onClick={() => setSelectedBusRoute(null)} className="p-2 hover:bg-slate-100 rounded-full">
+              <X className="w-4 h-4 text-slate-400" />
+            </button>
+          </div>
+        )}
+
         {selectedStopName && activeAmenities.length > 0 && (
           <div className="absolute top-6 left-6 right-6 md:right-auto md:w-80 bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-white p-4 z-[1800] animate-in fade-in slide-in-from-top-4 duration-300">
              <div className="flex justify-between items-center mb-3">

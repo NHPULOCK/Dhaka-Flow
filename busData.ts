@@ -19,6 +19,26 @@ export const BUS_DATA: BusRoute[] = [
   { name: "Raida", description: "Postogola to Diabari", totalStops: 18, stops: ["পোস্তগোলা", "যাত্রাবাড়ী", "বিশ্বরোড", "মালিবাগ", "রামপুরা", "বাড্ডা", "নতুন বাজার", "কুড়িল", "বিমানবন্দর", "উত্তরা", "দিয়াবাড়ি"], stopsEn: ["Postogola", "Jatrabari", "Bishwa Road", "Malibagh", "Rampura", "Badda", "Notun Bazar", "Kuril", "Airport", "Uttara", "Diabari"] },
   { name: "Rajanigandha", description: "Basila to Notun Bazar", totalStops: 14, stops: ["বসিলা", "মোহাম্মদপুর", "আসাদ গেট", "ফার্মগেট", "মহাখালী", "গুলশান ১", "বাড্ডা", "নতুন বাজার"], stopsEn: ["Basila", "Mohammadpur", "Asad Gate", "Farmgate", "Mohakhali", "Gulshan 1", "Badda", "Notun Bazar"] },
   { name: "Victor Classic", description: "Sadarghat to Abdullahpur", totalStops: 19, stops: ["সদরঘাট", "গুলিস্তান", "পল্টন", "মগবাজার", "রামপুরা", "বাড্ডা", "নতুন বাজার", "কুড়িল", "খিলক্ষেত", "বিমানবন্দর", "উত্তরা", "আব্দুল্লাহপুর"], stopsEn: ["Sadarghat", "Gulistan", "Paltan", "Moghbazar", "Rampura", "Badda", "Notun Bazar", "Kuril", "Khilkhet", "Airport", "Uttara", "Abdullahpur"] },
+  { name: "Abir Paribahan", description: "Gabtoli to Jatrabari", totalStops: 14, stops: ["গাবতলী", "শ্যামলী", "আসাদ গেট", "সায়েন্স ল্যাব", "শাহবাগ", "গুলিস্তান", "যাত্রাবাড়ী"], stopsEn: ["Gabtoli", "Shyamoli", "Asad Gate", "Science Lab", "Shahbagh", "Gulistan", "Jatrabari"] },
+  { name: "Bahon", description: "Mirpur to Sadarghat", totalStops: 15, stops: ["মিরপুর", "কালসী", "কুড়িল", "বাড্ডা", "রামপুরা", "মালিবাগ", "মতিঝিল", "সদরঘাট"], stopsEn: ["Mirpur", "Kalshi", "Kuril", "Badda", "Rampura", "Malibagh", "Motijheel", "Sadarghat"] },
+  { name: "Basumati", description: "Gabtoli to Gazipur", totalStops: 16, stops: ["গাবতলী", "মিরপুর ১০", "কালসী", "কুড়িল", "বিমানবন্দর", "উত্তরা", "টঙ্গী", "গাজীপুর"], stopsEn: ["Gabtoli", "Mirpur 10", "Kalshi", "Kuril", "Airport", "Uttara", "Tongi", "Gazipur"] },
+  { name: "Bhuiyan Paribahan", description: "Narayanganj to Motijheel", totalStops: 10, stops: ["নারায়ণগঞ্জ", "চাষাড়া", "সাইনবোর্ড", "যাত্রাবাড়ী", "মতিঝিল"], stopsEn: ["Narayanganj", "Chashara", "Signboard", "Jatrabari", "Motijheel"] },
+  { name: "City Link", description: "Chittagong Road to Gulistan", totalStops: 8, stops: ["চট্টগ্রাম রোড", "সাইনবোর্ড", "যাত্রাবাড়ী", "সায়েদাবাদ", "গুলিস্তান"], stopsEn: ["Chittagong Road", "Signboard", "Jatrabari", "Sayedabad", "Gulistan"] },
+  { name: "Dewan Paribahan", description: "Azimpur to Gazipur", totalStops: 18, stops: ["আজিমপুর", "শাহবাগ", "ফার্মগেট", "মহাখালী", "বনানী", "কুড়িল", "বিমানবন্দর", "টঙ্গী", "গাজীপুর"], stopsEn: ["Azimpur", "Shahbagh", "Farmgate", "Mohakhali", "Banani", "Kuril", "Airport", "Tongi", "Gazipur"] },
+  { name: "Duronto", description: "Mirpur to Motijheel", totalStops: 12, stops: ["মিরপুর", "মিরপুর ১০", "আগারগাঁও", "ফার্মগেট", "শাহবাগ", "পল্টন", "মতিঝিল"], stopsEn: ["Mirpur", "Mirpur 10", "Agargaon", "Farmgate", "Shahbagh", "Paltan", "Motijheel"] },
+  { name: "Elite", description: "Savar to Motijheel", totalStops: 12, stops: ["সাভার", "গাবতলী", "শ্যামলী", "ফার্মগেট", "শাহবাগ", "মতিঝিল"], stopsEn: ["Savar", "Gabtoli", "Shyamoli", "Farmgate", "Shahbagh", "Motijheel"] },
+  { name: "Falgun Paribahan", description: "Azimpur to Banani", totalStops: 10, stops: ["আজিমপুর", "নিউ মার্কেট", "সায়েন্স ল্যাব", "শাহবাগ", "ফার্মগেট", "মহাখালী", "বনানী"], stopsEn: ["Azimpur", "New Market", "Science Lab", "Shahbagh", "Farmgate", "Mohakhali", "Banani"] },
+  { name: "Green Dhaka", description: "Mirpur to Nadda", totalStops: 10, stops: ["মিরপুর", "কালসী", "কুড়িল", "যমুনা ফিউচার পার্ক", "বসুন্ধরা", "নadda"], stopsEn: ["Mirpur", "Kalshi", "Kuril", "JFP", "Bashundhara", "Nadda"] },
+  { name: "Himachol Paribahan", description: "Mirpur to Gulshan", totalStops: 12, stops: ["মিরপুর", "মিরপুর ১০", "আগারগাঁও", "মহাখালী", "গুলশান ১", "গুলশান ২"], stopsEn: ["Mirpur", "Mirpur 10", "Agargaon", "Mohakhali", "Gulshan 1", "Gulshan 2"] },
+  { name: "Kanak", description: "Gabtoli to Jatrabari", totalStops: 14, stops: ["গাবতলী", "শ্যামলী", "আসাদ গেট", "শাহবাগ", "গুলিস্তান", "যাত্রাবাড়ী"], stopsEn: ["Gabtoli", "Shyamoli", "Asad Gate", "Shahbagh", "Gulistan", "Jatrabari"] },
+  { name: "Labbaik Paribahan", description: "Savar to Motijheel", totalStops: 14, stops: ["সাভার", "গাবতলী", "শ্যামলী", "আসাদ গেট", "সায়েন্স ল্যাব", "শাহবাগ", "মতিঝিল"], stopsEn: ["Savar", "Gabtoli", "Shyamoli", "Asad Gate", "Science Lab", "Shahbagh", "Motijheel"] },
+  { name: "Mirpur Link", description: "Mirpur to Motijheel", totalStops: 12, stops: ["মিরপুর", "মিরপুর ১০", "ফার্মগেট", "শাহবাগ", "মতিঝিল"], stopsEn: ["Mirpur", "Mirpur 10", "Farmgate", "Shahbagh", "Motijheel"] },
+  { name: "Moitri Paribahan", description: "Mohammadpur to Sayedabad", totalStops: 12, stops: ["মোহাম্মদপুর", "আসাদ গেট", "সায়েন্স ল্যাব", "শাহবাগ", "গুলিস্তান", "সায়েদাবাদ"], stopsEn: ["Mohammadpur", "Asad Gate", "Science Lab", "Shahbagh", "Gulistan", "Sayedabad"] },
+  { name: "Nilachal", description: "Gazipur to Sadarghat", totalStops: 18, stops: ["গাজীপুর", "টঙ্গী", "বিমানবন্দর", "বনানী", "মহাখালী", "শাহবাগ", "গুলিস্তান", "সদরঘাট"], stopsEn: ["Gazipur", "Tongi", "Airport", "Banani", "Mohakhali", "Shahbagh", "Gulistan", "Sadarghat"] },
+  { name: "Safety", description: "Mirpur to Sayedabad", totalStops: 14, stops: ["মিরপুর", "মিরপুর ১০", "ফার্মগেট", "শাহবাগ", "গুলিস্তান", "সায়েদাবাদ"], stopsEn: ["Mirpur", "Mirpur 10", "Farmgate", "Shahbagh", "Gulistan", "Sayedabad"] },
+  { name: "Shikor Paribahan", description: "Mirpur to Jatrabari", totalStops: 15, stops: ["মিরপুর", "মিরপুর ১০", "ফার্মগেট", "শাহবাগ", "গুলিস্তান", "যাত্রাবাড়ী"], stopsEn: ["Mirpur", "Mirpur 10", "Farmgate", "Shahbagh", "Gulistan", "Jatrabari"] },
+  { name: "Skyline", description: "Mirpur to Motijheel", totalStops: 12, stops: ["মিরপুর", "কাজীপাড়া", "ফার্মগেট", "শাহবাগ", "মতিঝিল"], stopsEn: ["Mirpur", "Kazipara", "Farmgate", "Shahbagh", "Motijheel"] },
+  { name: "Turag Paribahan", description: "Jatrabari to Tongi", totalStops: 16, stops: ["যাত্রাবাড়ী", "খিলগাঁও", "রামপুরা", "বাড্ডা", "কুড়িল", "বিমানবন্দর", "টঙ্গী"], stopsEn: ["Jatrabari", "Khilgaon", "Rampura", "Badda", "Kuril", "Airport", "Tongi"] },
   { name: "Winner", description: "Mohammadpur to Demra", totalStops: 12, stops: ["মোহাম্মদপুর", "সায়েন্স ল্যাব", "শাহবাগ", "মগবাজার", "মালিবাগ", "খিলগাঁও", "বাসাবো", "ডেমরা"], stopsEn: ["Mohammadpur", "Science Lab", "Shahbagh", "Moghbazar", "Malibagh", "Khilgaon", "Basabo", "Demra"] }
 ];
 
@@ -61,6 +81,7 @@ export const STOP_COORDS: Record<string, [number, number]> = {
   "Jahangir Gate": [23.7700, 90.3950],
   "Mohakhali": [23.7776, 90.4005],
   "Gulshan 1": [23.7790, 90.4150],
+  "Gulshan 2": [23.7925, 90.4162],
   "Gulistan": [23.7230, 90.4100],
   "Paltan": [23.7300, 90.4100],
   "Kakrail": [23.7400, 90.4100],
@@ -68,6 +89,7 @@ export const STOP_COORDS: Record<string, [number, number]> = {
   "Banani": [23.7940, 90.4043],
   "Tongi": [23.8814, 90.4005],
   "Gazipur Chourasta": [23.9999, 90.4203],
+  "Gazipur": [23.9999, 90.4203],
   "Jatrabari": [23.7120, 90.4340],
   "Bishwa Road": [23.7250, 90.4400],
   "Shahbagh": [23.7390, 90.3957],
@@ -85,7 +107,11 @@ export const STOP_COORDS: Record<string, [number, number]> = {
   "Basabo": [23.7450, 90.4350],
   "Demra": [23.7200, 90.4800],
   "Signboard": [23.6930, 90.4730],
-  "Sayedabad": [23.7180, 90.4320]
+  "Sayedabad": [23.7180, 90.4320],
+  "Chashara": [23.6200, 90.4950],
+  "Narayanganj": [23.6238, 90.5000],
+  "Chittagong Road": [23.6950, 90.5050],
+  "Mirpur": [23.8050, 90.3650]
 };
 
 export const UNIQUE_STOPS = Array.from(new Set(BUS_DATA.flatMap(bus => bus.stopsEn))).sort();
