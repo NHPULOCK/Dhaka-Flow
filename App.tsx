@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, Bus, Navigation, ArrowRight, Info, Loader2, Map as MapIcon, Compass, UserCircle, Footprints, Bike } from 'lucide-react';
+import { Search, MapPin, Bus, Navigation, ArrowRight, Info, Loader2, Map as MapIcon, Compass, UserCircle, Footprints, Bike, ArrowLeftRight, MessageCircle } from 'lucide-react';
 import { UNIQUE_STOPS, STOP_COORDS } from './busData';
 import { findRoutes } from './services/routingEngine';
 import { getTravelGuidance } from './services/geminiService';
@@ -9,11 +9,13 @@ import { TripSuggestion, RouteSegment } from './types';
 // Leaflet is loaded via script tag in index.html
 declare const L: any;
 
+const BUS_COLORS = ['#2563eb', '#9333ea', '#ea580c', '#db2777', '#0891b2'];
+
 const MapComponent: React.FC<{ selectedTrip: TripSuggestion | null, userLoc: [number, number] | null }> = ({ selectedTrip, userLoc }) => {
   const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<any[]>([]);
-  const polylineRef = useRef<any>(null);
+  const layersRef = useRef<any[]>([]);
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -25,10 +27,11 @@ const MapComponent: React.FC<{ selectedTrip: TripSuggestion | null, userLoc: [nu
       }).addTo(mapRef.current);
     }
 
-    // Clear previous
+    // Clear previous markers and layers
     markersRef.current.forEach(m => m.remove());
     markersRef.current = [];
-    if (polylineRef.current) polylineRef.current.remove();
+    layersRef.current.forEach(l => l.remove());
+    layersRef.current = [];
 
     if (userLoc) {
       const userMarker = L.circleMarker(userLoc, { color: '#3b82f6', fillOpacity: 0.8, radius: 8 }).addTo(mapRef.current);
@@ -37,38 +40,64 @@ const MapComponent: React.FC<{ selectedTrip: TripSuggestion | null, userLoc: [nu
     }
 
     if (selectedTrip) {
+      let busCount = 0;
+      
       selectedTrip.segments.forEach((seg, idx) => {
-        const color = seg.type === 'BUS' ? '#2563eb' : seg.type === 'RICKSHAW' ? '#16a34a' : '#94a3b8';
-        const marker = L.marker(seg.fromCoord, {
-          icon: L.divIcon({
-            className: 'bg-white border-2 border-blue-500 rounded-full w-6 h-6 flex items-center justify-center shadow-md',
-            html: `<div class="w-2 h-2 rounded-full" style="background: ${color}"></div>`
-          })
-        }).addTo(mapRef.current);
-        marker.bindPopup(`<b>${seg.from}</b><br/>${seg.description}`);
+        let color = '#94a3b8'; // Default Walk/Generic
+        if (seg.type === 'BUS') {
+          color = BUS_COLORS[busCount % BUS_COLORS.length];
+          busCount++;
+        } else if (seg.type === 'RICKSHAW') {
+          color = '#16a34a';
+        }
+
+        // Marker for start of segment
+        const isTransfer = idx > 0 && selectedTrip.segments[idx-1].type === 'BUS' && seg.type === 'WALK';
+        
+        const markerIcon = L.divIcon({
+          className: 'custom-div-icon',
+          html: isTransfer 
+            ? `<div class="bg-white border-2 border-orange-500 rounded-full w-8 h-8 flex items-center justify-center shadow-lg transform -translate-x-1/2 -translate-y-1/2">
+                 <div class="w-5 h-5 text-orange-600 flex items-center justify-center">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 8 16 13"></polyline><line x1="21" y1="8" x2="9" y2="8"></line><polyline points="8 21 3 16 8 11"></polyline><line x1="3" y1="16" x2="15" y2="16"></line></svg>
+                 </div>
+               </div>`
+            : `<div class="bg-white border-2 border-blue-500 rounded-full w-6 h-6 flex items-center justify-center shadow-md transform -translate-x-1/2 -translate-y-1/2">
+                 <div class="w-2.5 h-2.5 rounded-full" style="background: ${color}"></div>
+               </div>`,
+          iconSize: [0, 0]
+        });
+
+        const marker = L.marker(seg.fromCoord, { icon: markerIcon }).addTo(mapRef.current);
+        marker.bindPopup(`<b>${seg.from}</b><br/>${seg.description}${isTransfer ? ' (বাস পরিবর্তন করুন)' : ''}`);
         markersRef.current.push(marker);
 
         // Draw line for segment
-        L.polyline([seg.fromCoord, seg.toCoord], { 
+        const line = L.polyline([seg.fromCoord, seg.toCoord], { 
           color, 
-          weight: 5, 
+          weight: seg.type === 'BUS' ? 6 : 4, 
           dashArray: seg.type === 'BUS' ? null : '10, 10',
-          opacity: 0.8 
+          opacity: 0.9 
         }).addTo(mapRef.current);
+        layersRef.current.push(line);
         
+        // Final destination marker
         if (idx === selectedTrip.segments.length - 1) {
           const lastMarker = L.marker(seg.toCoord, {
             icon: L.divIcon({
-              className: 'bg-white border-2 border-red-500 rounded-full w-6 h-6 flex items-center justify-center shadow-md',
-              html: `<div class="w-2 h-2 rounded-full bg-red-500"></div>`
+              className: 'custom-div-icon',
+              html: `<div class="bg-white border-2 border-red-500 rounded-full w-8 h-8 flex items-center justify-center shadow-lg transform -translate-x-1/2 -translate-y-1/2">
+                       <div class="w-4 h-4 rounded-full bg-red-500 animate-pulse"></div>
+                     </div>`,
+              iconSize: [0, 0]
             })
           }).addTo(mapRef.current);
-          lastMarker.bindPopup(`<b>${seg.to}</b>`);
+          lastMarker.bindPopup(`<b>${seg.to}</b> (গন্তব্য)`);
           markersRef.current.push(lastMarker);
         }
       });
 
-      const group = L.featureGroup(markersRef.current);
+      const group = L.featureGroup([...markersRef.current, ...layersRef.current]);
       mapRef.current.fitBounds(group.getBounds().pad(0.2));
     }
   }, [selectedTrip, userLoc]);
@@ -197,7 +226,7 @@ export default function App() {
                 <h3 className="font-bold text-slate-800">{trip.summary}</h3>
                 <div className="flex items-center gap-4 mt-3 text-xs font-medium text-slate-500">
                   <span className="flex items-center gap-1"><MapIcon className="w-3 h-3" /> {trip.segments.length} টি ধাপ</span>
-                  <span className="flex items-center gap-1"><Info className="w-3 h-3" /> ৳২৫ - ৬০</span>
+                  <span className="flex items-center gap-1"><Info className="w-3 h-3" /> আনুমানিক ৳৩০ - ৮০</span>
                 </div>
               </div>
             ))}
@@ -218,8 +247,8 @@ export default function App() {
                     <Compass className="w-6 h-6 text-blue-600" />
                   </div>
                   <div>
-                    <h2 className="font-black text-slate-800 text-lg">আপনার ভ্রমণ নির্দেশিকা</h2>
-                    <p className="text-xs text-slate-500 font-medium">এআই-চালিত ব্যক্তিগত গাইডলাইন</p>
+                    <h2 className="font-black text-slate-800 text-lg">আপনার পূর্ণাঙ্গ ভ্রমণ প্যাকেজ</h2>
+                    <p className="text-xs text-slate-500 font-medium">এআই-চালিত উন্নত গাইডলাইন</p>
                   </div>
                 </div>
                 <button onClick={() => setSelectedTrip(null)} className="p-2 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors">
@@ -227,23 +256,42 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Segment Flow Icons */}
+              {/* Segment Flow Icons with Details */}
               <div className="flex items-center gap-2 mb-6 overflow-x-auto py-2 scrollbar-hide">
-                {selectedTrip.segments.map((seg, i) => (
-                  <React.Fragment key={i}>
-                    <div className="flex flex-col items-center min-w-[80px]">
-                      <div className={`p-3 rounded-2xl mb-1 ${
-                        seg.type === 'BUS' ? 'bg-blue-100 text-blue-600' : 
-                        seg.type === 'RICKSHAW' ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-600'
-                      }`}>
-                        {seg.type === 'BUS' ? <Bus className="w-5 h-5" /> : 
-                         seg.type === 'RICKSHAW' ? <Bike className="w-5 h-5" /> : <Footprints className="w-5 h-5" />}
+                {selectedTrip.segments.map((seg, i) => {
+                  const isBus = seg.type === 'BUS';
+                  const isRickshaw = seg.type === 'RICKSHAW';
+                  const isLast = i === selectedTrip.segments.length - 1;
+                  return (
+                    <React.Fragment key={i}>
+                      <div className="flex flex-col items-center min-w-[100px] text-center">
+                        <div className={`p-3 rounded-2xl mb-1 relative ${
+                          seg.type === 'BUS' ? 'bg-blue-100 text-blue-600' : 
+                          seg.type === 'RICKSHAW' ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-600'
+                        }`} style={isBus ? {backgroundColor: `${BUS_COLORS[i % BUS_COLORS.length]}20`, color: BUS_COLORS[i % BUS_COLORS.length]} : {}}>
+                          {seg.type === 'BUS' ? <Bus className="w-5 h-5" /> : 
+                           seg.type === 'RICKSHAW' ? <Bike className="w-5 h-5" /> : <Footprints className="w-5 h-5" />}
+                          
+                          {seg.distanceKm && (
+                            <div className="absolute -top-1 -right-1 bg-white border border-slate-200 rounded-md px-1 py-0.5 text-[8px] font-black text-slate-600 shadow-sm">
+                              {seg.distanceKm.toFixed(1)}km
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase">{seg.type === 'WALK' ? 'হাঁটা' : seg.type === 'RICKSHAW' ? 'রিকশা' : 'বাস'}</span>
+                        {seg.busName && <span className="text-[9px] font-black text-slate-800 truncate max-w-[90px] mt-0.5">{seg.busName}</span>}
                       </div>
-                      <span className="text-[10px] font-bold text-slate-500 uppercase">{seg.type}</span>
-                    </div>
-                    {i < selectedTrip.segments.length - 1 && <ArrowRight className="w-4 h-4 text-slate-300 shrink-0" />}
-                  </React.Fragment>
-                ))}
+                      {!isLast && (
+                        <div className="flex items-center shrink-0 px-1">
+                          {selectedTrip.segments[i+1].type === 'WALK' && isBus ? 
+                            <ArrowLeftRight className="w-4 h-4 text-orange-400" /> : 
+                            <ArrowRight className="w-4 h-4 text-slate-300" />
+                          }
+                        </div>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </div>
 
               {isAiLoading ? (
@@ -251,26 +299,29 @@ export default function App() {
                   <div className="h-4 bg-slate-100 rounded w-full animate-pulse"></div>
                   <div className="h-4 bg-slate-100 rounded w-5/6 animate-pulse"></div>
                   <div className="h-4 bg-slate-100 rounded w-4/6 animate-pulse"></div>
-                  <div className="flex items-center gap-2 text-blue-600 font-bold text-sm">
+                  <div className="flex items-center gap-2 text-blue-600 font-bold text-sm bg-blue-50 p-3 rounded-xl border border-blue-100">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>এআই আপনার জন্য সেরা গাইডলাইন তৈরি করছে...</span>
+                    <span>এআই আপনার জন্য রিকশা ভাড়া এবং সেরা পথ খুজছে...</span>
                   </div>
                 </div>
               ) : (
-                <div className="prose prose-sm max-w-none text-slate-700 leading-relaxed whitespace-pre-wrap bg-blue-50/50 p-5 rounded-2xl border border-blue-100">
-                  {aiGuidance}
+                <div className="relative">
+                  <div className="absolute -top-3 left-4 bg-blue-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest shadow-lg">
+                    AI Travel Tips
+                  </div>
+                  <div className="prose prose-sm max-w-none text-slate-700 leading-relaxed whitespace-pre-wrap bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-inner">
+                    {aiGuidance}
+                  </div>
                 </div>
               )}
 
-              <div className="mt-6">
-                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">গুরুত্বপূর্ণ স্টপেজ</h4>
-                <div className="flex flex-wrap gap-2">
-                  {selectedTrip.segments.map((s, i) => (
-                    <span key={i} className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-[10px] font-bold text-slate-600 flex items-center gap-1 shadow-sm">
-                      <MapPin className="w-3 h-3 text-red-500" />
-                      {s.to}
-                    </span>
-                  ))}
+              <div className="mt-6 flex items-start gap-4 p-4 bg-orange-50 rounded-2xl border border-orange-100">
+                <div className="p-2 bg-orange-100 rounded-lg shrink-0">
+                  <MessageCircle className="w-5 h-5 text-orange-600" />
+                </div>
+                <div className="text-xs">
+                  <h4 className="font-bold text-orange-800 mb-1">প্রয়োজনীয় টিপস:</h4>
+                  <p className="text-orange-700 leading-snug">রিকশা ভাড়া করার সময় অবশ্যই "মামা" বলে সম্বোধন করবেন এবং গন্তব্যের নাম পরিষ্কার করে বলবেন। ভিড়ের মধ্যে মোবাইল সাবধানে রাখবেন।</p>
                 </div>
               </div>
             </div>

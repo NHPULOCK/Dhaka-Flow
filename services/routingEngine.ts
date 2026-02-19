@@ -14,6 +14,13 @@ const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => 
   return R * c;
 };
 
+const calculateRickshawFare = (distanceKm: number): string => {
+  if (distanceKm < 0.5) return "৳২০ - ৩০";
+  if (distanceKm < 1.0) return "৳৩০ - ৫০";
+  if (distanceKm < 2.0) return "৳৬০ - ৮০";
+  return "৳১০০+";
+};
+
 const findNearestStop = (lat: number, lng: number) => {
   let nearest = null;
   let minDistance = Infinity;
@@ -41,7 +48,8 @@ export const findRoutes = (start: string | [number, number], end: string | [numb
   if (typeof start !== 'string' || !STOP_COORDS[start]) {
     const nearest = findNearestStop(startCoord[0], startCoord[1]);
     if (nearest) {
-      const isRickshaw = nearest.distance > 0.5;
+      const isRickshaw = nearest.distance > 0.4;
+      const fare = isRickshaw ? calculateRickshawFare(nearest.distance) : '';
       initialSegment = {
         type: isRickshaw ? 'RICKSHAW' : 'WALK',
         from: 'আপনার অবস্থান',
@@ -49,8 +57,8 @@ export const findRoutes = (start: string | [number, number], end: string | [numb
         fromCoord: startCoord,
         toCoord: nearest.coord as [number, number],
         description: isRickshaw 
-          ? `আপনার অবস্থান থেকে রিকশায় ${nearest.name} বাস স্টপেজে যান।` 
-          : `আপনার অবস্থান থেকে হেঁটে ${nearest.name} বাস স্টপেজে যান।`,
+          ? `আপনার অবস্থান থেকে রিকশায় ${nearest.name} বাস স্টপেজে যান (আনুমানিক ভাড়া: ${fare})।` 
+          : `আপনার অবস্থান থেকে হেঁটে ${nearest.name} বাস স্টপেজে যান। এটি খুব কাছেই।`,
         distanceKm: nearest.distance
       };
       startStopName = nearest.name;
@@ -61,7 +69,8 @@ export const findRoutes = (start: string | [number, number], end: string | [numb
   if (typeof end !== 'string' || !STOP_COORDS[end]) {
     const nearest = findNearestStop(endCoord[0], endCoord[1]);
     if (nearest) {
-      const isRickshaw = nearest.distance > 0.5;
+      const isRickshaw = nearest.distance > 0.4;
+      const fare = isRickshaw ? calculateRickshawFare(nearest.distance) : '';
       finalSegment = {
         type: isRickshaw ? 'RICKSHAW' : 'WALK',
         from: nearest.name,
@@ -69,7 +78,7 @@ export const findRoutes = (start: string | [number, number], end: string | [numb
         fromCoord: nearest.coord as [number, number],
         toCoord: endCoord,
         description: isRickshaw 
-          ? `${nearest.name} থেকে রিকশায় গন্তব্যে পৌঁছান।` 
+          ? `${nearest.name} থেকে রিকশায় গন্তব্যে পৌঁছান (ভাড়া প্রায়: ${fare})।` 
           : `${nearest.name} থেকে হেঁটে গন্তব্যে পৌঁছান।`,
         distanceKm: nearest.distance
       };
@@ -133,7 +142,7 @@ export const findRoutes = (start: string | [number, number], end: string | [numb
              segments.push({
                type: 'WALK', from: tStop, to: tStop,
                fromCoord: STOP_COORDS[tStop], toCoord: STOP_COORDS[tStop],
-               description: `${tStop}-এ বাস পরিবর্তন করুন (${bA.name} থেকে ${bB.name})।`
+               description: `${tStop}-এ বাস পরিবর্তন করুন (${bA.name} থেকে ${bB.name})। প্রয়োজনে এখানে কিছুক্ষণ অপেক্ষা করুন।`
              });
 
              segments.push({
