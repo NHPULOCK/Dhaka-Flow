@@ -8,6 +8,15 @@ export interface BusRoute {
 }
 
 export type SegmentType = 'WALK' | 'BUS' | 'RICKSHAW';
+export type AmenityType = 'PHARMACY' | 'FOOD' | 'RESTROOM' | 'SCHOOL' | 'COLLEGE' | 'MOSQUE';
+
+export interface Amenity {
+  id: string;
+  name: string;
+  type: AmenityType;
+  coord: [number, number];
+  description?: string;
+}
 
 export interface RouteSegment {
   type: SegmentType;

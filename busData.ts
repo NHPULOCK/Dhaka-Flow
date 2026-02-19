@@ -1,5 +1,5 @@
 
-import { BusRoute } from './types';
+import { BusRoute, Amenity, AmenityType } from './types';
 
 export const BUS_DATA: BusRoute[] = [
   { name: "Achim Paribahan", description: "Gabtoli to Demra", totalStops: 20, stops: ["গাবতলী", "টেকনিক্যাল", "মিরপুর ১", "মিরপুর ১০", "কালসী", "ইসিবি চত্বর", "কুড়িল", "যমুনা ফিউচার পার্ক", "বসুন্ধরা", "নতুন বাজার", "বাড্ডা", "রামপুরা", "বনশ্রী", "স্টাফ কোয়ার্টার"], stopsEn: ["Gabtoli", "Technical", "Mirpur 1", "Mirpur 10", "Kalshi", "ECB Square", "Kuril", "JFP", "Bashundhara", "Notun Bazar", "Badda", "Rampura", "Banasree", "Staff Quarter"] },
@@ -17,7 +17,7 @@ export const BUS_DATA: BusRoute[] = [
   { name: "Anik", description: "Azimpur to Tongi", totalStops: 17, stops: ["আজিমপুর", "নিউ মার্কেট", "সায়েন্স ল্যাব", "শাহবাগ", "ফার্মগেট", "মহাখালী", "কুড়িল", "বিমানবন্দর", "টঙ্গী"], stopsEn: ["Azimpur", "New Market", "Science Lab", "Shahbagh", "Farmgate", "Mohakhali", "Kuril", "Airport", "Tongi"] },
   { name: "Bahon", description: "Mirpur to Sadarghat", totalStops: 16, stops: ["মিরপুর", "কালশী", "কুড়িল", "বাড্ডা", "রামপুরা", "মালিবাগ", "পল্টন", "সদরঘাট"], stopsEn: ["Mirpur", "Kalshi", "Kuril", "Badda", "Rampura", "Malibagh", "Paltan", "Sadarghat"] },
   { name: "Balaka", description: "Sadarghat to Gazipur", totalStops: 19, stops: ["সদরঘাট", "গুলিস্তান", "শাহবাগ", "ফার্মগেট", "বনানী", "বিমানবন্দর", "আব্দুল্লাহপুর", "টঙ্গী", "গাজীপুর"], stopsEn: ["Sadarghat", "Gulistan", "Shahbagh", "Farmgate", "Banani", "Airport", "Abdullahpur", "Tongi", "Gazipur"] },
-  { name: "Basumati", description: "Gabtoli to Gazipur", totalStops: 18, stops: ["গাবতলী", "মিরপুর ১০", "কালশী", "কুড়িল", "বিমানবন্দর", "উত্তরা", "টঙ্গী", "বোর্ড বাজার", "গাজীপুর"], stopsEn: ["Gabtoli", "Mirpur 10", "Kalshi", "Kuril", "Airport", "Uttara", "Tongi", "Board Bazar", "Gazipur"] },
+  { name: "Basumati", description: "Gabtoli to Gazipur", totalStops: 18, stops: ["গাবতলী", "মিরপুর ১০", "কালশী", "কুড়িল", "বিমানবন্দর", "উত্তরা", "টঙ্গী", "বোর্ড বাজার", "গাজীপুর"], stopsEn: ["গাবতলী", "Mirpur 10", "Kalshi", "Kuril", "Airport", "Uttara", "Tongi", "Board Bazar", "Gazipur"] },
   { name: "Bikash", description: "Azimpur to Gazipur", totalStops: 20, stops: ["আজিমপুর", "সায়েন্স ল্যাব", "ফার্মগেট", "মহাখালী", "বনানী", "বিমানবন্দর", "উত্তরা", "টঙ্গী", "গাজীপুর"], stopsEn: ["Azimpur", "Science Lab", "Farmgate", "Mohakhali", "Banani", "Airport", "Uttara", "Tongi", "Gazipur"] },
   { name: "Bikolpo", description: "Mirpur 12 to Motijheel", totalStops: 15, stops: ["মিরপুর ১২", "মিরপুর ১০", "কাজীপাড়া", "ফার্মগেট", "শাহবাগ", "প্রেসক্লাব", "মতিঝিল"], stopsEn: ["Mirpur 12", "Mirpur 10", "Kazipara", "Farmgate", "Shahbagh", "Press Club", "Motijheel"] },
   { name: "Borak", description: "Khilgaon to Gabtoli", totalStops: 14, stops: ["খিলগাঁও", "মালিবাগ", "মগবাজার", "কাওরান বাজার", "ফার্মগেট", "আসাদ গেট", "শ্যামলী", "গাবতলী"], stopsEn: ["Khilgaon", "Malibagh", "Moghbazar", "Karwan Bazar", "Farmgate", "Asad Gate", "Shyamoli", "Gabtoli"] },
@@ -124,4 +124,43 @@ export const STOP_COORDS: Record<string, [number, number]> = {
   "Shewrapara": [23.7900, 90.3750],
   "Nadda": [23.8100, 90.4200],
   "Shia Masjid": [23.7650, 90.3500]
+};
+
+// Function to generate mock nearby amenities for a stop
+export const getNearbyAmenities = (coord: [number, number], stopName: string): Amenity[] => {
+  const types: AmenityType[] = ['PHARMACY', 'FOOD', 'RESTROOM', 'SCHOOL', 'COLLEGE', 'MOSQUE'];
+  const banglaNames: Record<AmenityType, string[]> = {
+    PHARMACY: ['লাজ ফার্মা', 'মেডিক্স ফার্মা', 'জনতা ড্রাগ হাউস', 'শাপলা ফার্মেসি'],
+    FOOD: ['হাজী বিরিয়ানি', 'ক্যাফে ঝিলিক', 'ঢাকা কনফেকশনারি', 'ফুড ভিলা'],
+    RESTROOM: ['পাবলিক টয়লেট', 'কমিউনিটি ওয়াশ রুম'],
+    SCHOOL: ['আদর্শ উচ্চ বিদ্যালয়', 'প্রগতি পাঠশালা', 'ল্যাবরেটরি হাই স্কুল'],
+    COLLEGE: ['ঢাকা সিটি কলেজ', 'গভ: মডেল কলেজ', 'আইডিয়াল কলেজ'],
+    MOSQUE: ['বায়তুল আমান জামে মসজিদ', 'খানকা শরীফ মসজিদ', 'কেন্দ্রীয় জামে মসজিদ']
+  };
+
+  const amenities: Amenity[] = [];
+  
+  // Seed for consistency based on stop name
+  let seed = 0;
+  for (let i = 0; i < stopName.length; i++) seed += stopName.charCodeAt(i);
+
+  for (let i = 0; i < 4; i++) {
+    const type = types[(seed + i) % types.length];
+    const names = banglaNames[type];
+    const name = names[(seed * (i + 1)) % names.length];
+    
+    // Tiny random offset for coordinate
+    const latOffset = (Math.sin(seed + i) * 0.001);
+    const lngOffset = (Math.cos(seed + i) * 0.001);
+
+    amenities.push({
+      id: `amenity-${stopName}-${i}`,
+      name: `${name} (${stopName})`,
+      type,
+      coord: [coord[0] + latOffset, coord[1] + lngOffset],
+      description: `${stopName}-এর কাছেই অবস্থিত একটি গুরুত্বপূর্ণ ${type === 'MOSQUE' ? 'মসজিদ' : 'স্থান'}।`
+    });
+  }
+  
+  return amenities;
 };
