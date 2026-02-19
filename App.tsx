@@ -14,23 +14,44 @@ const BRAND_BLUE = '#003566';
 const BRAND_ORANGE = '#ff7b00'; 
 const BUS_COLORS = [BRAND_BLUE, '#16a34a', BRAND_ORANGE, '#db2777', '#0891b2'];
 
-const AmenityIcon = ({ type }: { type: AmenityType }) => {
+const AmenityIcon = ({ type, size = "w-3.5 h-3.5" }: { type: AmenityType, size?: string }) => {
   switch (type) {
-    case 'PHARMACY': return <Pill className="w-3.5 h-3.5 text-red-600" />;
-    case 'FOOD': return <Coffee className="w-3.5 h-3.5 text-orange-600" />;
-    case 'MOSQUE': return <Building className="w-3.5 h-3.5 text-green-700" />;
-    case 'COLLEGE': return <GraduationCap className="w-3.5 h-3.5 text-blue-700" />;
-    case 'SCHOOL': return <School className="w-3.5 h-3.5 text-indigo-600" />;
-    case 'RESTROOM': return <Info className="w-3.5 h-3.5 text-slate-600" />;
-    default: return <MapPin className="w-3.5 h-3.5" />;
+    case 'PHARMACY': return <Pill className={`${size} text-red-600`} />;
+    case 'FOOD': return <Coffee className={`${size} text-orange-600`} />;
+    case 'MOSQUE': return <Building className={`${size} text-green-700`} />;
+    case 'COLLEGE': return <GraduationCap className={`${size} text-blue-700`} />;
+    case 'SCHOOL': return <School className={`${size} text-indigo-600`} />;
+    case 'RESTROOM': return <Info className={`${size} text-slate-600`} />;
+    default: return <MapPin className={`${size}`} />;
   }
+};
+
+const getAmenityHtml = (type: AmenityType) => {
+  let color = 'slate';
+  let svg = '';
+  switch (type) {
+    case 'PHARMACY': color = 'red-500'; svg = '<path d="M17 11h-4V7l-2-2H7l-2 2v4H1v4l2 2h4v4l2 2h4l2-2v-4h4l2-2v-4h4l2-2v-4l-2-2z"/>'; break;
+    case 'FOOD': color = 'orange-500'; svg = '<path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8zM6 1v3M10 1v3M14 1v3"/>'; break;
+    case 'MOSQUE': color = 'green-600'; svg = '<path d="M3 21h18M3 7l9-4 9 4v14H3V7zm9 4a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/>'; break;
+    case 'COLLEGE': color = 'blue-600'; svg = '<path d="m22 10-10-5L2 10l10 5 10-5zM6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/>'; break;
+    case 'SCHOOL': color = 'indigo-600'; svg = '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20M4 19.5V5a2.5 2.5 0 0 1 2.5-2.5H20v14.5"/>'; break;
+    case 'RESTROOM': color = 'slate-600'; svg = '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>'; break;
+  }
+  return `
+    <div class="bg-white p-1.5 rounded-full shadow-md border border-slate-200 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-${color}">
+        ${svg}
+      </svg>
+    </div>
+  `;
 };
 
 const MapComponent: React.FC<{ 
   selectedTrip: TripSuggestion | null, 
   userLoc: [number, number] | null,
+  activeAmenities: Amenity[],
   onStopSelect: (name: string, coord: [number, number]) => void
-}> = ({ selectedTrip, userLoc, onStopSelect }) => {
+}> = ({ selectedTrip, userLoc, activeAmenities, onStopSelect }) => {
   const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<any[]>([]);
@@ -47,14 +68,15 @@ const MapComponent: React.FC<{
       }).addTo(mapRef.current);
       L.control.zoom({ position: 'topright' }).addTo(mapRef.current);
     }
+  }, []);
 
-    // Clear previous
+  useEffect(() => {
+    if (!mapRef.current) return;
+
     markersRef.current.forEach(m => m.remove());
     markersRef.current = [];
     layersRef.current.forEach(l => l.remove());
     layersRef.current = [];
-    amenityMarkersRef.current.forEach(m => m.remove());
-    amenityMarkersRef.current = [];
 
     if (userLoc) {
       const userMarker = L.circleMarker(userLoc, { color: BRAND_BLUE, fillOpacity: 0.8, radius: 8 }).addTo(mapRef.current);
@@ -64,7 +86,6 @@ const MapComponent: React.FC<{
 
     if (selectedTrip) {
       let busCount = 0;
-      
       selectedTrip.segments.forEach((seg, idx) => {
         let color = '#94a3b8';
         if (seg.type === 'BUS') {
@@ -91,8 +112,11 @@ const MapComponent: React.FC<{
         });
 
         const marker = L.marker(seg.fromCoord, { icon: markerIcon }).addTo(mapRef.current);
-        marker.on('click', () => onStopSelect(seg.from, seg.fromCoord));
-        marker.bindPopup(`<b>${seg.from}</b><br/>${seg.description}<br/><span class="text-blue-600 font-bold text-[10px] cursor-pointer">আশেপাশের জায়গা দেখতে ক্লিক করুন</span>`);
+        marker.on('click', (e: any) => {
+          L.DomEvent.stopPropagation(e);
+          onStopSelect(seg.from, seg.fromCoord);
+        });
+        marker.bindPopup(`<b>${seg.from}</b><br/>${seg.description}`);
         markersRef.current.push(marker);
 
         const line = L.polyline([seg.fromCoord, seg.toCoord], { 
@@ -113,7 +137,10 @@ const MapComponent: React.FC<{
               iconSize: [0, 0]
             })
           }).addTo(mapRef.current);
-          lastMarker.on('click', () => onStopSelect(seg.to, seg.toCoord));
+          lastMarker.on('click', (e: any) => {
+             L.DomEvent.stopPropagation(e);
+             onStopSelect(seg.to, seg.toCoord);
+          });
           lastMarker.bindPopup(`<b>${seg.to}</b> (গন্তব্য)`);
           markersRef.current.push(lastMarker);
         }
@@ -123,6 +150,34 @@ const MapComponent: React.FC<{
       mapRef.current.fitBounds(group.getBounds().pad(0.2));
     }
   }, [selectedTrip, userLoc]);
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+    amenityMarkersRef.current.forEach(m => m.remove());
+    amenityMarkersRef.current = [];
+
+    activeAmenities.forEach(amenity => {
+      const markerIcon = L.divIcon({
+        className: 'amenity-div-icon',
+        html: getAmenityHtml(amenity.type),
+        iconSize: [0, 0]
+      });
+
+      const marker = L.marker(amenity.coord, { icon: markerIcon }).addTo(mapRef.current);
+      marker.bindPopup(`
+        <div class="p-1">
+          <p class="font-bold text-slate-800 text-sm">${amenity.name}</p>
+          <p class="text-xs text-slate-500 mt-0.5">${amenity.description || ''}</p>
+        </div>
+      `);
+      amenityMarkersRef.current.push(marker);
+    });
+
+    if (activeAmenities.length > 0) {
+      const group = L.featureGroup(amenityMarkersRef.current);
+      mapRef.current.flyToBounds(group.getBounds().pad(1.0));
+    }
+  }, [activeAmenities]);
 
   return <div ref={mapContainerRef} className="w-full h-full" />;
 };
@@ -152,12 +207,10 @@ export default function App() {
     setIsSearching(true);
     const startInput = origin || (userLoc as [number, number]);
     const endInput = destination;
-    
     if (!startInput || !endInput) {
       setIsSearching(false);
       return;
     }
-
     const routes = findRoutes(startInput, endInput);
     setResults(routes);
     setSelectedTrip(null);
@@ -183,6 +236,7 @@ export default function App() {
     const amenities = getNearbyAmenities(coord, name);
     setActiveAmenities(amenities);
     setSelectedStopName(name);
+    if (activeView === 'list') setActiveView('map');
   };
 
   return (
@@ -193,11 +247,9 @@ export default function App() {
         <button onClick={() => setActiveView('map')} className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeView === 'map' ? 'bg-[#003566] text-white shadow-lg' : 'text-slate-500'}`}><MapIcon className="w-4 h-4" /> ম্যাপ ভিউ</button>
       </div>
 
-      {/* Sidebar Panel */}
       <div className={`w-full md:w-[450px] bg-white border-r border-slate-200 shadow-xl z-[1500] flex flex-col h-full transition-transform duration-300 md:translate-x-0 ${activeView === 'map' ? 'hidden md:flex' : 'flex'}`}>
         <header className="px-5 py-6 bg-white border-b border-slate-100 flex-shrink-0 flex items-center gap-4">
           <div className="relative w-14 h-14 shrink-0">
-             {/* Logo Representation strictly matching the image provided */}
              <div className="absolute inset-0 bg-green-800 rounded-full flex items-center justify-center overflow-hidden border-2 border-white shadow-lg">
                 <div className="absolute bottom-0 w-full h-1/2 bg-slate-200"></div>
                 <div className="z-10 bg-white p-1 rounded-md shadow-sm">
@@ -270,11 +322,9 @@ export default function App() {
         </div>
       </div>
 
-      {/* Map View */}
       <div className={`flex-1 flex flex-col h-full bg-slate-100 relative ${activeView === 'list' ? 'hidden md:flex' : 'flex'}`}>
-        <MapComponent selectedTrip={selectedTrip} userLoc={userLoc} onStopSelect={handleStopSelect} />
+        <MapComponent selectedTrip={selectedTrip} userLoc={userLoc} activeAmenities={activeAmenities} onStopSelect={handleStopSelect} />
         
-        {/* Nearby Amenities Overlay */}
         {selectedStopName && activeAmenities.length > 0 && (
           <div className="absolute top-6 left-6 right-6 md:right-auto md:w-80 bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-white p-4 z-[1800] animate-in fade-in slide-in-from-top-4 duration-300">
              <div className="flex justify-between items-center mb-3">
@@ -300,7 +350,6 @@ export default function App() {
           </div>
         )}
 
-        {/* AI Bottom Sheet */}
         {selectedTrip && (
           <div className="absolute bottom-0 left-0 right-0 md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:w-[650px] bg-white rounded-t-3xl md:rounded-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.15)] p-5 md:p-6 border border-slate-200 z-[2500] flex flex-col overflow-hidden max-h-[75vh] md:max-h-[60vh]">
             <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-4 md:hidden"></div>
