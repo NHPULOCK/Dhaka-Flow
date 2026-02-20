@@ -1,5 +1,5 @@
 
-import { BUS_DATA, STOP_COORDS } from '../busData';
+import { BUS_DATA, STOP_COORDS, ALL_LOCATIONS_COORDS } from '../busData';
 import { TripSuggestion, RouteSegment, SegmentType } from '../types';
 
 // Helper to calculate distance between two coordinates in KM
@@ -38,54 +38,75 @@ const findNearestStop = (lat: number, lng: number) => {
 export const findRoutes = (start: string | [number, number], end: string | [number, number]): TripSuggestion[] => {
   const suggestions: TripSuggestion[] = [];
 
-  let startStopName = typeof start === 'string' ? start : '';
-  let startCoord: [number, number] = typeof start === 'string' ? STOP_COORDS[start] : start;
+  let startCoord: [number, number];
+  let startDisplayName: string;
+  if (typeof start === 'string') {
+    startCoord = ALL_LOCATIONS_COORDS[start];
+    startDisplayName = start;
+  } else {
+    startCoord = start;
+    startDisplayName = 'আপনার অবস্থান';
+  }
   
-  let endStopName = typeof end === 'string' ? end : '';
-  let endCoord: [number, number] = typeof end === 'string' ? STOP_COORDS[end] : end;
+  let endCoord: [number, number];
+  let endDisplayName: string;
+  if (typeof end === 'string') {
+    endCoord = ALL_LOCATIONS_COORDS[end];
+    endDisplayName = end;
+  } else {
+    endCoord = end;
+    endDisplayName = 'গন্তব্য';
+  }
 
+  if (!startCoord || !endCoord) return [];
+
+  // Step 1: Find nearest BUS STOPS for origin and destination
+  const nearestStartStop = findNearestStop(startCoord[0], startCoord[1]);
+  const nearestEndStop = findNearestStop(endCoord[0], endCoord[1]);
+
+  if (!nearestStartStop || !nearestEndStop) return [];
+
+  // Generate initial segment (Origin -> Nearest Stop)
   let initialSegment: RouteSegment | null = null;
-  if (typeof start !== 'string' || !STOP_COORDS[start]) {
-    const nearest = findNearestStop(startCoord[0], startCoord[1]);
-    if (nearest) {
-      const isRickshaw = nearest.distance > 0.4;
-      const fare = isRickshaw ? calculateRickshawFare(nearest.distance) : '';
-      initialSegment = {
-        type: isRickshaw ? 'RICKSHAW' : 'WALK',
-        from: 'আপনার অবস্থান',
-        to: nearest.name,
-        fromCoord: startCoord,
-        toCoord: nearest.coord as [number, number],
-        description: isRickshaw 
-          ? `আপনার অবস্থান থেকে রিকশায় ${nearest.name} বাস স্টপেজে যান (আনুমানিক ভাড়া: ${fare})।` 
-          : `আপনার অবস্থান থেকে হেঁটে ${nearest.name} বাস স্টপেজে যান। এটি খুব কাছেই।`,
-        distanceKm: nearest.distance
-      };
-      startStopName = nearest.name;
-    }
+  if (startDisplayName !== nearestStartStop.name) {
+    const isRickshaw = nearestStartStop.distance > 0.4;
+    const fare = isRickshaw ? calculateRickshawFare(nearestStartStop.distance) : '';
+    initialSegment = {
+      type: isRickshaw ? 'RICKSHAW' : 'WALK',
+      from: startDisplayName,
+      to: nearestStartStop.name,
+      fromCoord: startCoord,
+      toCoord: nearestStartStop.coord as [number, number],
+      description: isRickshaw 
+        ? `${startDisplayName} থেকে রিকশায় ${nearestStartStop.name} বাস স্টপেজে যান (আনুমানিক ভাড়া: ${fare})।` 
+        : `${startDisplayName} থেকে হেঁটে ${nearestStartStop.name} বাস স্টপেজে যান। এটি খুব কাছেই।`,
+      distanceKm: nearestStartStop.distance
+    };
   }
 
+  // Generate final segment (Last Stop -> Destination POI)
   let finalSegment: RouteSegment | null = null;
-  if (typeof end !== 'string' || !STOP_COORDS[end]) {
-    const nearest = findNearestStop(endCoord[0], endCoord[1]);
-    if (nearest) {
-      const isRickshaw = nearest.distance > 0.4;
-      const fare = isRickshaw ? calculateRickshawFare(nearest.distance) : '';
-      finalSegment = {
-        type: isRickshaw ? 'RICKSHAW' : 'WALK',
-        from: nearest.name,
-        to: 'গন্তব্য',
-        fromCoord: nearest.coord as [number, number],
-        toCoord: endCoord,
-        description: isRickshaw 
-          ? `${nearest.name} থেকে রিকশায় গন্তব্যে পৌঁছান (ভাড়া প্রায়: ${fare})।` 
-          : `${nearest.name} থেকে হেঁটে গন্তব্যে পৌঁছান।`,
-        distanceKm: nearest.distance
-      };
-      endStopName = nearest.name;
-    }
+  if (endDisplayName !== nearestEndStop.name) {
+    const distToTarget = getDistance(nearestEndStop.coord[0], nearestEndStop.coord[1], endCoord[0], endCoord[1]);
+    const isRickshaw = distToTarget > 0.4;
+    const fare = isRickshaw ? calculateRickshawFare(distToTarget) : '';
+    finalSegment = {
+      type: isRickshaw ? 'RICKSHAW' : 'WALK',
+      from: nearestEndStop.name,
+      to: endDisplayName,
+      fromCoord: nearestEndStop.coord as [number, number],
+      toCoord: endCoord,
+      description: isRickshaw 
+        ? `${nearestEndStop.name} থেকে রিকশায় আপনার গন্তব্য ${endDisplayName}-এ পৌঁছান (ভাড়া প্রায়: ${fare})।` 
+        : `${nearestEndStop.name} থেকে হেঁটে আপনার গন্তব্য ${endDisplayName}-এ পৌঁছান।`,
+      distanceKm: distToTarget
+    };
   }
 
+  const startStopName = nearestStartStop.name;
+  const endStopName = nearestEndStop.name;
+
+  // Step 2: Find Direct Bus Connections
   const directBuses = BUS_DATA.filter(bus => 
     bus.stopsEn.includes(startStopName) && bus.stopsEn.includes(endStopName)
   );
@@ -119,7 +140,8 @@ export const findRoutes = (start: string | [number, number], end: string | [numb
     }
   });
 
-  if (suggestions.length < 3) {
+  // Step 3: Find 1-Transfer Connections if direct buses are few
+  if (suggestions.length < 4) {
     const startBuses = BUS_DATA.filter(b => b.stopsEn.includes(startStopName));
     const endBuses = BUS_DATA.filter(b => b.stopsEn.includes(endStopName));
 

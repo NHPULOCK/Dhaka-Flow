@@ -2,27 +2,66 @@
 import { GoogleGenAI } from "@google/genai";
 import { TripSuggestion } from "../types";
 
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+/**
+ * Resolves a text search (Bangla or English) to coordinates using Google Maps grounding.
+ */
+export const resolveLocation = async (query: string, userCoords?: [number, number]): Promise<{ name: string, coord: [number, number] } | null> => {
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: `Identify the precise geographical coordinates (latitude and longitude) for the place or institution named "${query}" in Dhaka, Bangladesh. Focus on schools, colleges, or hospitals if mentioned. Return the response in this format: [LAT, LNG]`,
+      config: {
+        tools: [{ googleMaps: {} }],
+        toolConfig: {
+          retrievalConfig: {
+            latLng: userCoords ? { latitude: userCoords[0], longitude: userCoords[1] } : undefined
+          }
+        }
+      }
+    });
+
+    const text = response.text || "";
+    // Robust extraction for [23.123, 90.123] format
+    const coordMatch = text.match(/\[(\d+\.\d+),\s*(\d+\.\d+)\]/);
+    
+    if (coordMatch) {
+      return {
+        name: query,
+        coord: [parseFloat(coordMatch[1]), parseFloat(coordMatch[2])]
+      };
+    }
+    
+    // Fallback regex for loose text
+    const fallbackMatch = text.match(/(\d+\.\d+),\s*(\d+\.\d+)/);
+    if (fallbackMatch) {
+      return {
+        name: query,
+        coord: [parseFloat(fallbackMatch[1]), parseFloat(fallbackMatch[2])]
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error("Location Resolution Error:", error);
+    return null;
+  }
+};
+
 export const getTravelGuidance = async (start: string, end: string, trip: TripSuggestion): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  
   const prompt = `
-    আমি ঢাকার মধ্যে ভ্রমণ করছি। নিচের রুটটির জন্য আমাকে একটি পূর্ণাঙ্গ "ভ্রমণ প্যাকেজ" বা গাইডলাইন তৈরি করে দিন।
+    আমি ঢাকার মধ্যে ভ্রমণ করছি। শুরুস্থান: ${start}, গন্তব্য: ${end}।
+    নিচের রুটটির জন্য আমাকে একটি পূর্ণাঙ্গ "ভ্রমণ গাইডলাইন" তৈরি করে দিন।
     
     রুট ডিটেইলস: ${trip.segments.map(s => `${s.type}: ${s.from} থেকে ${s.to} ${s.busName ? `(বাস: ${s.busName})` : ''}`).join(' -> ')}।
     
-    অনুগ্রহ করে নিচের বিষয়গুলো বাংলায় (Bangla) বিস্তারিতভাবে লিখুন:
-    ১. পূর্ণাঙ্গ প্রবাহ (Full Flow): শুরু থেকে শেষ পর্যন্ত ধাপে ধাপে আমাকে কী করতে হবে? 
-    ২. রিকশা গাইড (Rickshaw Guide): 
-       - রিকশাচালককে কী বলে ডাকবেন? (যেমন: "মামা, অমুক জায়গায় যাবেন?")
-       - দরদাম করার জন্য কিছু দরকারি বাক্য।
-       - আনুমানিক ভাড়া কত হতে পারে (দূরত্ব অনুযায়ী একটি নির্দিষ্ট রেঞ্জ দিন)?
-    ৩. হাঁটার গাইড (Walking Guide): 
-       - রাস্তা ব্লক থাকলে বা রোদ/বৃষ্টি হলে বিকল্প হিসেবে বড় রাস্তা বা গলি দিয়ে যাওয়ার পরামর্শ।
-       - হাঁটার পথটি যদি ১ কিমি এর বেশি হয়, তবে রিকশা নেওয়ার পরামর্শ দিন।
-    ৪. বাস গাইড: বাসে ওঠার জন্য রাস্তার সঠিক পাশে দাঁড়ানো এবং হেল্পারকে কী বলে থামানো উচিত।
-    ৫. বিশেষ সতর্কতা: পকেটমার বা ভিড় থেকে বাঁচার টিপস এবং গন্তব্যস্থলের আশেপাশে পরিচিত ল্যান্ডমার্ক।
+    অনুগ্রহ করে বাংলায় (Bangla) বিস্তারিতভাবে লিখুন:
+    ১. ভ্রমণ প্রবাহ: ধাপে ধাপে কী করতে হবে?
+    ২. রিকশা গাইড: বাসে ওঠার আগে বা পরে রিকশা নিতে হলে ভাড়া কত হতে পারে এবং চালককে কী বলবেন?
+    ৩. ল্যান্ডমার্ক: গন্তব্যের আশেপাশে কোনো পরিচিত স্কুল, কলেজ বা হাসপাতাল থাকলে তা উল্লেখ করুন।
+    ৪. সতর্কতা: ভিড় বা জ্যামের বিষয়ে স্থানীয় পরামর্শ।
     
-    পুরো তথ্যটি বুলেট পয়েন্ট এবং বোল্ড টেক্সট ব্যবহার করে অত্যন্ত প্রাঞ্জলভাবে লিখুন। এটি যেন একজন স্থানীয় মানুষের পরামর্শের মতো মনে হয়।
+    তথ্যগুলো বুলেট পয়েন্টে এবং সাহসী (Bold) টেক্সট ব্যবহার করে লিখুন।
   `;
 
   try {
@@ -30,9 +69,8 @@ export const getTravelGuidance = async (start: string, end: string, trip: TripSu
       model: "gemini-3-flash-preview",
       contents: prompt,
     });
-    return response.text || "দুঃখিত, নির্দেশিকা তৈরি করা যায়নি। ম্যাপের রুটটি অনুসরণ করুন।";
+    return response.text || "দুঃখিত, বিস্তারিত গাইডলাইন তৈরি করা সম্ভব হয়নি।";
   } catch (error) {
-    console.error("Gemini Error:", error);
-    return "ম্যাপের নির্দেশনাগুলো মনোযোগ দিয়ে দেখুন। রুট পরিবর্তনের সময় রিকশা ব্যবহার করতে পারেন।";
+    return "ম্যাপের নির্দেশনাগুলো অনুসরণ করুন।";
   }
 };
