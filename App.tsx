@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, MapPin, Bus, Navigation, ArrowRight, Info, Loader2, Map as MapIcon, Compass, UserCircle, Footprints, Bike, ArrowLeftRight, MessageCircle, X, List, Pill, Coffee, Building, GraduationCap, School, ChevronRight, MapPinned, Layers, Search as SearchIcon, Hospital, LocateFixed } from 'lucide-react';
 import { BUS_DATA, UNIQUE_STOPS_PAIRS, STOP_COORDS, getNearbyAmenities, getStopBn, ALL_LOCATION_PAIRS, ALL_LOCATIONS_COORDS, POI_COORDS } from './busData';
@@ -31,8 +32,8 @@ const LocationSearchInput: React.FC<{
     ? ALL_LOCATION_PAIRS.filter(p => 
         p.bn.toLowerCase().includes(query) || 
         p.en.toLowerCase().includes(query)
-      ).slice(0, 15) // Increased limit to show more bus stops
-    : ALL_LOCATION_PAIRS.slice(0, 8); // Default popular stops
+      ).slice(0, 15)
+    : ALL_LOCATION_PAIRS.slice(0, 8);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -75,7 +76,7 @@ const LocationSearchInput: React.FC<{
                 onClick={() => {
                   if (userLoc) {
                     onSelect("আমার বর্তমান অবস্থান", true);
-                    onChange("আমার বর্তমান অবস্থান");
+                    onChange("আমার বর্তমান অবস্থান (Current Location)");
                     setIsOpen(false);
                   } else {
                     alert("দয়া করে লোকেশন পারমিশন দিন");
@@ -87,8 +88,8 @@ const LocationSearchInput: React.FC<{
                   <LocateFixed className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="text-sm font-black text-blue-700">আমার বর্তমান অবস্থান ব্যবহার করুন</div>
-                  <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">অটো-ট্র্যাকিং (GPS)</div>
+                  <div className="text-sm font-black text-blue-700">আমার বর্তমান অবস্থান (Use GPS)</div>
+                  <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">অটো-ট্র্যাকিং / AUTO-TRACK</div>
                 </div>
               </button>
             )}
@@ -103,7 +104,7 @@ const LocationSearchInput: React.FC<{
                   key={idx}
                   onClick={() => {
                     onSelect(p.en);
-                    onChange(p.bn);
+                    onChange(`${p.bn} (${p.en})`);
                     setIsOpen(false);
                   }}
                   className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center gap-3 border-b border-slate-50 last:border-0 group"
@@ -111,10 +112,12 @@ const LocationSearchInput: React.FC<{
                   <div className={`p-2 rounded-xl transition-transform group-hover:scale-110 ${isHospital ? 'bg-rose-50 text-rose-600' : isSchool ? 'bg-indigo-50 text-indigo-600' : isPoi ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>
                     {isHospital ? <Hospital className="w-4 h-4" /> : isSchool ? <GraduationCap className="w-4 h-4" /> : isPoi ? <Building className="w-4 h-4" /> : <Bus className="w-4 h-4" />}
                   </div>
-                  <div>
-                    <div className="text-sm font-bold text-slate-800 leading-tight">{p.bn}</div>
+                  <div className="overflow-hidden">
+                    <div className="text-sm font-bold text-slate-800 leading-tight truncate">
+                      {p.bn} <span className="text-slate-400 font-medium ml-1 text-xs">/ {p.en}</span>
+                    </div>
                     <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">
-                      {isHospital ? 'চিকিৎসা কেন্দ্র' : isSchool ? 'শিক্ষা প্রতিষ্ঠান' : isPoi ? 'প্রতিষ্ঠাস / ল্যান্ডমার্ক' : 'বাস স্টপেজ'}
+                      {isHospital ? 'চিকিৎসা কেন্দ্র / Hospital' : isSchool ? 'শিক্ষা প্রতিষ্ঠান / Institution' : isPoi ? 'প্রতিষ্ঠাস / Landmark' : 'বাস স্টপেজ / Bus Stop'}
                     </div>
                   </div>
                 </button>
@@ -123,7 +126,8 @@ const LocationSearchInput: React.FC<{
             
             {query.length > 0 && suggestions.length === 0 && (
               <div className="p-5 text-center">
-                 <p className="text-xs font-bold text-slate-400">এই নামে সরাসরি স্টপেজ নেই। AI দিয়ে ম্যাপে খোঁজা হবে।</p>
+                 <p className="text-xs font-bold text-slate-400">এই নামে কোনো স্টপেজ নেই। AI দিয়ে ম্যাপে খোঁজা হবে।</p>
+                 <p className="text-[10px] text-slate-300 font-bold uppercase mt-1">NO DIRECT MATCH. AI SEARCH ENABLED.</p>
               </div>
             )}
           </div>
@@ -280,7 +284,7 @@ const MapComponent: React.FC<{
 
     if (userLoc) {
       const userMarker = L.circleMarker(userLoc, { color: '#ffffff', fillColor: BRAND_BLUE, fillOpacity: 1, weight: 3, radius: 10 }).addTo(mapRef.current);
-      userMarker.bindPopup("<div class='font-black text-slate-900 text-sm'>আপনি এখানে আছেন</div>");
+      userMarker.bindPopup("<div class='font-black text-slate-900 text-sm'>আপনি এখানে আছেন / You are here</div>");
       markersRef.current.push(userMarker);
     }
 
@@ -321,7 +325,7 @@ const MapComponent: React.FC<{
           onStopSelect(stopEn, coord);
         });
         
-        marker.bindPopup(`<b>${stopBn}</b><br/>${selectedBusRoute.name} এর স্টপেজ।`);
+        marker.bindPopup(`<b>${stopBn} (${stopEn})</b><br/>${selectedBusRoute.name} এর স্টপেজ।`);
         markersRef.current.push(marker);
       });
 
@@ -363,7 +367,7 @@ const MapComponent: React.FC<{
           L.DomEvent.stopPropagation(e);
           onStopSelect(seg.from, seg.fromCoord);
         });
-        marker.bindPopup(`<b>${fromBn}</b><br/>${seg.description}`);
+        marker.bindPopup(`<b>${fromBn} (${seg.from})</b><br/>${seg.description}`);
         markersRef.current.push(marker);
 
         const line = L.polyline([seg.fromCoord, seg.toCoord], { 
@@ -391,7 +395,7 @@ const MapComponent: React.FC<{
              L.DomEvent.stopPropagation(e);
              onStopSelect(seg.to, seg.toCoord);
           });
-          lastMarker.bindPopup(`<b>${toBn}</b> (গন্তব্য)`);
+          lastMarker.bindPopup(`<b>${toBn} (${seg.to})</b> (গন্তব্য / Destination)`);
           markersRef.current.push(lastMarker);
         }
       });
@@ -475,24 +479,27 @@ export default function App() {
     let endInput = destination;
 
     if (!origin && originQuery) {
-       const resolved = await resolveLocation(originQuery, userLoc || undefined);
+       // Support bilingual cleanup if user pasted formatted string back
+       const cleanQuery = originQuery.split(' (')[0];
+       const resolved = await resolveLocation(cleanQuery, userLoc || undefined);
        if (resolved) startInput = resolved.coord;
-       else startInput = originQuery;
+       else startInput = cleanQuery;
     } else if (origin === 'আমার বর্তমান অবস্থান' && userLoc) {
        startInput = userLoc;
     }
 
     if (!destination && destinationQuery) {
-       const resolved = await resolveLocation(destinationQuery, userLoc || undefined);
+       const cleanDest = destinationQuery.split(' (')[0];
+       const resolved = await resolveLocation(cleanDest, userLoc || undefined);
        if (resolved) {
          endInput = resolved.coord;
        } else {
-         alert("আপনার গন্তব্য খুঁজে পাওয়া যায়নি। দয়া করে সঠিক নাম ব্যবহার করুন।");
+         alert("আপনার গন্তব্য খুঁজে পাওয়া যায়নি। দয়া করে সঠিক নাম ব্যবহার করুন। / Destination not found.");
          setIsSearching(false);
          return;
        }
     } else if (!destination && !destinationQuery) {
-      alert("গন্তব্য নির্বাচন করুন");
+      alert("গন্তব্য নির্বাচন করুন / Select Destination");
       setIsSearching(false);
       return;
     }
@@ -500,7 +507,7 @@ export default function App() {
     if (!startInput) {
        if (userLoc) startInput = userLoc;
        else {
-         alert("শুরুস্থান নির্বাচন করুন");
+         alert("শুরুস্থান নির্বাচন করুন / Select Origin");
          setIsSearching(false);
          return;
        }
@@ -566,8 +573,8 @@ export default function App() {
       `}</style>
 
       <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[2000] flex bg-white rounded-full shadow-2xl border border-slate-200 p-1">
-        <button onClick={() => setActiveView('list')} className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeView === 'list' ? 'bg-[#003566] text-white shadow-lg' : 'text-slate-500'}`}><List className="w-4 h-4" /> রুট লিস্ট</button>
-        <button onClick={() => setActiveView('map')} className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeView === 'map' ? 'bg-[#003566] text-white shadow-lg' : 'text-slate-500'}`}><MapIcon className="w-4 h-4" /> ম্যাপ ভিউ</button>
+        <button onClick={() => setActiveView('list')} className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeView === 'list' ? 'bg-[#003566] text-white shadow-lg' : 'text-slate-500'}`}><List className="w-4 h-4" /> রুট লিস্ট / List</button>
+        <button onClick={() => setActiveView('map')} className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold transition-all ${activeView === 'map' ? 'bg-[#003566] text-white shadow-lg' : 'text-slate-500'}`}><MapIcon className="w-4 h-4" /> ম্যাপ / Map</button>
       </div>
 
       <div className={`w-full md:w-[450px] bg-white border-r border-slate-200 shadow-xl z-[1500] flex flex-col h-full transition-transform duration-300 md:translate-x-0 ${activeView === 'map' ? 'hidden md:flex' : 'flex'}`}>
@@ -589,13 +596,13 @@ export default function App() {
               <span style={{ color: BRAND_GREEN }} className="text-2xl font-black tracking-tight">Dhaka</span>
               <span style={{ color: BRAND_BLUE }} className="text-2xl font-black tracking-tight ml-1">Flow</span>
             </div>
-            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">স্মার্ট ট্রানজিট অ্যাসিস্ট্যান্ট</p>
+            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">Smart City Transit Assistant</p>
           </div>
         </header>
 
         <div className="flex border-b border-slate-100 flex-shrink-0">
-          <button onClick={() => setSidebarTab('search')} className={`flex-1 py-4 text-xs font-black uppercase tracking-widest transition-all border-b-2 ${sidebarTab === 'search' ? 'border-[#003566] text-[#003566]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>রুট খুজুন</button>
-          <button onClick={() => setSidebarTab('routes')} className={`flex-1 py-4 text-xs font-black uppercase tracking-widest transition-all border-b-2 ${sidebarTab === 'routes' ? 'border-[#003566] text-[#003566]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>সবগুলো বাস</button>
+          <button onClick={() => setSidebarTab('search')} className={`flex-1 py-4 text-xs font-black uppercase tracking-widest transition-all border-b-2 ${sidebarTab === 'search' ? 'border-[#003566] text-[#003566]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>রুট খুজুন / Search</button>
+          <button onClick={() => setSidebarTab('routes')} className={`flex-1 py-4 text-xs font-black uppercase tracking-widest transition-all border-b-2 ${sidebarTab === 'routes' ? 'border-[#003566] text-[#003566]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>সব বাস / All Buses</button>
         </div>
 
         <div className="p-4 md:p-5 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
@@ -606,8 +613,8 @@ export default function App() {
                 <div className="relative space-y-3">
                   
                   <LocationSearchInput 
-                    label="শুরুস্থান"
-                    placeholder="বর্তমান অবস্থান বা স্থানের নাম..."
+                    label="শুরুস্থান / Origin"
+                    placeholder="Search Stop, Hospital, School..."
                     value={originQuery}
                     onChange={setOriginQuery}
                     onSelect={(name, isCoords) => {
@@ -620,8 +627,8 @@ export default function App() {
                   />
 
                   <LocationSearchInput 
-                    label="গন্তব্য"
-                    placeholder="হাসপাতাল, স্কুল বা গন্তব্য লিখুন..."
+                    label="গন্তব্য / Destination"
+                    placeholder="Where are you going?"
                     value={destinationQuery}
                     onChange={setDestinationQuery}
                     onSelect={(name) => setDestination(name)}
@@ -630,25 +637,25 @@ export default function App() {
 
                   <button onClick={handleSearch} disabled={isSearching} style={{ backgroundColor: BRAND_BLUE }} className="w-full hover:opacity-95 disabled:bg-slate-300 text-white font-black py-4 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 text-sm mt-2">
                     {isSearching ? <Loader2 className="w-5 h-5 animate-spin" /> : <Navigation className="w-5 h-5" />}
-                    ভ্রমণ নির্দেশিকা তৈরি করুন
+                    ভ্রমণ গাইড তৈরি করুন / Plan Trip
                   </button>
                 </div>
               </div>
 
               <div className="space-y-3 pb-24 md:pb-5">
-                <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest px-1">রুট ফলাফল</h2>
+                <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest px-1">রুট ফলাফল / Route Results</h2>
                 {results.map(trip => (
                   <button key={trip.id} onClick={() => selectTrip(trip)} className={`w-full text-left p-5 rounded-2xl border-2 transition-all block group ${selectedTrip?.id === trip.id ? 'border-[#003566] bg-blue-50/50' : 'border-slate-100 bg-white hover:border-slate-300 shadow-sm'}`}>
                     <div className="flex justify-between items-center mb-1.5">
                       <span className={`px-2 py-0.5 text-[9px] font-black uppercase rounded-md ${trip.totalTransfers === 0 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
-                        {trip.totalTransfers === 0 ? 'সরাসরি বাস' : 'বাস পরিবর্তন'}
+                        {trip.totalTransfers === 0 ? 'সরাসরি / Direct' : 'পরিবর্তন / Connecting'}
                       </span>
                       <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[#003566] transition-colors" />
                     </div>
                     <h3 className="font-black text-slate-800 text-base">{trip.summary}</h3>
                     <div className="flex items-center gap-4 mt-2 text-[11px] font-bold text-slate-500">
-                      <span className="flex items-center gap-1.5"><MapIcon className="w-3.5 h-3.5" /> {trip.segments.length} ধাপ</span>
-                      <span style={{ color: BRAND_BLUE }}>৳৩০ - ১২০ আনুমানিক ভাড়া</span>
+                      <span className="flex items-center gap-1.5"><MapIcon className="w-3.5 h-3.5" /> {trip.segments.length} ধাপে / Steps</span>
+                      <span style={{ color: BRAND_BLUE }}>৳৩০ - ১২০ (Approx Fare)</span>
                     </div>
                   </button>
                 ))}
@@ -657,7 +664,7 @@ export default function App() {
                     <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Compass className="w-8 h-8 text-slate-300" />
                     </div>
-                    <p className="text-sm font-bold text-slate-400">ঢাকার যেকোনো বাস স্টপেজ, স্কুল বা হাসপাতালের নাম বাংলায় বা ইংরেজিতে সার্চ করুন। আমাদের এআই আপনাকে সঠিক বাসের রুট এবং রিকশা ভাড়া জানাবে।</p>
+                    <p className="text-sm font-bold text-slate-400">Search any Stop, School, or Hospital in Bangla/English for smart route guidance.</p>
                   </div>
                 )}
               </div>
@@ -666,13 +673,13 @@ export default function App() {
             <div className="space-y-3 pb-24 md:pb-5">
               <div className="px-1 space-y-4 mb-2">
                  <div className="flex justify-between items-center">
-                    <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">ঢাকার বাস রুটসমূহ ({BUS_DATA.length})</h2>
+                    <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Dhaka Bus Network ({BUS_DATA.length})</h2>
                  </div>
                  <div className="relative group">
                     <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
                     <input 
                       type="text" 
-                      placeholder="বাসের নাম লিখে খুজুন..." 
+                      placeholder="বাসের নাম / Bus Name..." 
                       value={busSearchQuery}
                       onChange={(e) => setBusSearchQuery(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-sm font-semibold outline-none focus:border-blue-600 focus:bg-white transition-all shadow-sm"
@@ -715,7 +722,7 @@ export default function App() {
         >
           <Layers className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform" />
           <span className="text-xs font-black text-slate-800 hidden md:block">
-            {isSatellite ? 'মানচিত্র ভিউ' : 'স্যাটেলাইট ভিউ'}
+            {isSatellite ? 'মানচিত্র / Map' : 'স্যাটেলাইট / Satellite'}
           </span>
         </button>
 
@@ -728,9 +735,9 @@ export default function App() {
               <div>
                 <h3 className="text-base font-black text-slate-900 tracking-tight">{selectedBusRoute.name}</h3>
                 <div className="flex items-center gap-2 mt-0.5">
-                   <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{selectedBusRoute.stops.length} টি স্টপেজ</span>
+                   <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{selectedBusRoute.stops.length} Stops</span>
                    <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
-                   <span className="text-[10px] text-emerald-600 font-black uppercase tracking-widest">পুরো রুট ম্যাপ</span>
+                   <span className="text-[10px] text-emerald-600 font-black uppercase tracking-widest">Full Route Map</span>
                 </div>
               </div>
             </div>
@@ -747,9 +754,9 @@ export default function App() {
                  <div className="p-2 bg-slate-800 text-white rounded-xl shadow-md">
                     <MapPinned className="w-5 h-5" />
                  </div>
-                 <div>
-                   <h4 className="font-black text-slate-900 text-sm uppercase tracking-tight">{getStopBn(selectedStopName)}</h4>
-                   <p className="text-[10px] text-slate-500 font-bold">আশেপাশের প্রয়োজনীয় স্থান</p>
+                 <div className="overflow-hidden">
+                   <h4 className="font-black text-slate-900 text-sm uppercase tracking-tight truncate">{getStopBn(selectedStopName)}</h4>
+                   <p className="text-[10px] text-slate-500 font-bold">আশেপাশের স্থান / Nearby Places</p>
                  </div>
                </div>
                <button onClick={() => {setSelectedStopName(null); setActiveAmenities([]);}} className="p-2 hover:bg-slate-100 rounded-full transition-all text-slate-400"><X className="w-4 h-4" /></button>
@@ -770,13 +777,13 @@ export default function App() {
                  ))
                ) : (
                  <div className="text-center py-6 text-slate-400">
-                    <p className="text-xs font-bold">এই স্টপেজের আশেপাশে কোনো তথ্য পাওয়া যায়নি।</p>
+                    <p className="text-xs font-bold">No data found near this stop.</p>
                  </div>
                )}
              </div>
 
              <div className="mt-4 pt-4 border-t border-slate-100 flex-shrink-0">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">সঠিক তথ্য পেতে ম্যাপ জুম করুন</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Zoom map for accuracy</p>
              </div>
           </div>
         )}
@@ -788,8 +795,8 @@ export default function App() {
               <div className="flex items-center gap-4">
                 <div style={{ backgroundColor: BRAND_BLUE }} className="p-3.5 rounded-2xl text-white shadow-xl shadow-blue-100"><Compass className="w-6 h-6" /></div>
                 <div>
-                  <h2 className="font-black text-slate-900 text-lg md:text-xl tracking-tight">ভ্রমণ গাইড (বিস্তারিত পরিকল্পনা)</h2>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-0.5">এআই চালিত ভ্রমণ সহকারী</p>
+                  <h2 className="font-black text-slate-900 text-lg md:text-xl tracking-tight">ভ্রমণ গাইড / Travel Guide</h2>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-0.5">AI POWERED TRIP PLANNER</p>
                 </div>
               </div>
               <button onClick={() => setSelectedTrip(null)} className="p-3 hover:bg-slate-100 rounded-full transition-all text-slate-400 hover:text-slate-600 shadow-sm"><X className="w-6 h-6" /></button>
@@ -804,7 +811,7 @@ export default function App() {
                         {seg.type === 'BUS' ? <Bus className="w-6 h-6" /> : seg.type === 'RICKSHAW' ? <Bike className="w-6 h-6" /> : <Footprints className="w-6 h-6" />}
                       </div>
                       <span className="text-[10px] font-black text-slate-600 uppercase tracking-tighter text-center line-clamp-1 px-1">{getStopBn(seg.from)}</span>
-                      <span className="text-[9px] font-bold text-slate-400 uppercase mt-0.5">{seg.type === 'WALK' ? 'হাঁটা' : seg.type === 'RICKSHAW' ? 'রিকশা' : 'বাস'}</span>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase mt-0.5">{seg.type === 'WALK' ? 'WALK' : seg.type === 'RICKSHAW' ? 'RICKSHAW' : 'BUS'}</span>
                     </button>
                     {i < selectedTrip.segments.length - 1 && <ArrowRight className="w-4 h-4 text-slate-200 mx-2 shrink-0" />}
                   </React.Fragment>
@@ -820,8 +827,8 @@ export default function App() {
                     </div>
                   </div>
                   <div className="max-w-xs mx-auto">
-                    <h3 className="font-black text-slate-800 text-base mb-1">এআই পরামর্শ তৈরি করছে</h3>
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-tight leading-relaxed">ঢাকার যেকোনো স্থান বা প্রতিষ্ঠানে পৌঁছানোর নিখুঁত গাইডলাইন তৈরি হচ্ছে...</p>
+                    <h3 className="font-black text-slate-800 text-base mb-1">এআই পরামর্শ তৈরি করছে / AI PLANNING...</h3>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-tight leading-relaxed">Finding the perfect path to your destination institution...</p>
                   </div>
                 </div>
               ) : (
@@ -835,9 +842,9 @@ export default function App() {
                   <MessageCircle className="w-6 h-6 text-orange-600" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-black text-orange-900 mb-1">প্রো-টিপস (পরামর্শ)</h4>
+                  <h4 className="text-sm font-black text-orange-900 mb-1">Bilingual Pro-Tip</h4>
                   <p className="text-xs text-orange-800 font-medium leading-relaxed">
-                    শুরুস্থান হিসেবে "আমার বর্তমান অবস্থান" ব্যবহার করলে আপনি এখন যেখানে আছেন সেখান থেকেই সেরা রুট দেখা যাবে। কোনো নির্দিষ্ট স্কুল বা হাসপাতালে পৌঁছাতে কোনো সরাসরি বাস না পেলে, নিকটস্থ বাস স্টপেজ থেকে রিকশা ভাড়ার সঠিক ধারণা আমাদের এআই আপনাকে দিবে।
+                    Using "আমার বর্তমান অবস্থান" (Current Location) ensures the most accurate start point. Our AI calculates Rickshaw fares and landmarks specifically for Dhaka city context.
                   </p>
                 </div>
               </div>
