@@ -1,5 +1,5 @@
 {
-  "name": "Dhaka Bus Flow",
+  "name": "Remix: Dhaka Bus Flow",
   "description": "A smart navigation assistant for Dhaka city's local bus network, offering direct and connecting route suggestions with AI-powered travel guidance.",
   "requestFramePermissions": [
     "geolocation"
