@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import Fuse from 'fuse.js';
 import { Search, MapPin, Bus, Navigation, ArrowRight, Info, Loader2, Map as MapIcon, Compass, UserCircle, Footprints, Bike, ArrowLeftRight, MessageCircle, X, List, Pill, Coffee, Building, GraduationCap, School, ChevronRight, MapPinned, Layers, Search as SearchIcon, Hospital, LocateFixed } from 'lucide-react';
 import { BUS_DATA, UNIQUE_STOPS_PAIRS, STOP_COORDS, getNearbyAmenities, getStopBn, ALL_LOCATION_PAIRS, ALL_LOCATIONS_COORDS, POI_COORDS } from './busData';
 import { findRoutes } from './services/routingEngine';
@@ -14,6 +15,57 @@ const BRAND_BLUE = '#003566';
 const BRAND_ORANGE = '#ff7b00'; 
 const BUS_COLORS = [BRAND_BLUE, '#16a34a', BRAND_ORANGE, '#db2777', '#0891b2'];
 
+// Enrich location pairs with synonyms for better fuzzy matching
+const ENRICHED_LOCATIONS = ALL_LOCATION_PAIRS.map(p => {
+  const synonyms: string[] = [];
+  const en = p.en.toLowerCase();
+  const bn = p.bn;
+
+  if (en.includes("jfp")) synonyms.push("jamuna future park", "যমুনা ফিউচার পার্ক");
+  if (en.includes("du")) synonyms.push("dhaka university", "ঢাকা বিশ্ববিদ্যালয়");
+  if (en.includes("dmch")) synonyms.push("dhaka medical college", "ঢামেক");
+  if (en.includes("buet")) synonyms.push("bangladesh university of engineering and technology", "বুয়েট");
+  if (en.includes("nsu")) synonyms.push("north south university", "এনএসইউ");
+  if (en.includes("airport")) synonyms.push("bimanbondor", "বিমানবন্দর");
+  if (en.includes("farmgate")) synonyms.push("farm gate", "ফার্মগেট");
+  if (en.includes("science lab")) synonyms.push("science laboratory", "সায়েন্স ল্যাব");
+  if (en.includes("new market")) synonyms.push("newmarket", "নিউমার্কেট");
+  if (en.includes("mirpur")) synonyms.push("মিরপুর");
+  if (en.includes("badda")) synonyms.push("বাড্ডা");
+  if (en.includes("gulshan")) synonyms.push("গুলশান");
+  if (en.includes("banani")) synonyms.push("বনানী");
+  if (en.includes("uttara")) synonyms.push("উত্তরা");
+  if (en.includes("dhanmondi")) synonyms.push("ধানমন্ডি");
+  if (en.includes("motijheel")) synonyms.push("মতিঝিল");
+  if (en.includes("mohammadpur")) synonyms.push("মোহাম্মদপুর");
+  
+  // Add common variations
+  if (en.includes("32")) synonyms.push("৩২");
+  if (en.includes("10")) synonyms.push("১০");
+  if (en.includes("1")) synonyms.push("১");
+  if (en.includes("2")) synonyms.push("২");
+  if (en.includes("11")) synonyms.push("১১");
+  if (en.includes("12")) synonyms.push("১২");
+  if (en.includes("14")) synonyms.push("১৪");
+
+  return {
+    ...p,
+    synonyms: synonyms.join(" ")
+  };
+});
+
+const FUSE_INSTANCE = new Fuse(ENRICHED_LOCATIONS, {
+  keys: [
+    { name: 'bn', weight: 0.5 },
+    { name: 'en', weight: 0.4 },
+    { name: 'synonyms', weight: 0.1 }
+  ],
+  threshold: 0.35,
+  distance: 100,
+  ignoreLocation: true,
+  minMatchCharLength: 1
+});
+
 const LocationSearchInput: React.FC<{
   label: string;
   placeholder: string;
@@ -27,13 +79,11 @@ const LocationSearchInput: React.FC<{
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  const query = value.toLowerCase().trim();
-  const suggestions = query.length > 0 
-    ? ALL_LOCATION_PAIRS.filter(p => 
-        p.bn.toLowerCase().includes(query) || 
-        p.en.toLowerCase().includes(query)
-      ).slice(0, 15)
-    : ALL_LOCATION_PAIRS.slice(0, 8);
+  const query = value.trim();
+  const suggestions = useMemo(() => {
+    if (query.length === 0) return ENRICHED_LOCATIONS.slice(0, 8);
+    return FUSE_INSTANCE.search(query).map(r => r.item).slice(0, 15);
+  }, [query]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
